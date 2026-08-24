@@ -35,6 +35,49 @@ CREATE TABLE IF NOT EXISTS audit_log (
 );
 
 CREATE INDEX IF NOT EXISTS idx_audit_event ON audit_log(event_id);
+
+-- One row per failed payment we are tracking. `version` is the optimistic
+-- concurrency guard: webhooks are unordered, so two deliveries for the same
+-- case can be in flight at once. See warrant/core.py.
+CREATE TABLE IF NOT EXISTS cases (
+    case_id             TEXT    PRIMARY KEY,
+    payment_id          TEXT,
+    order_id            TEXT,
+    customer_id         TEXT    NOT NULL,
+    case_type           TEXT    NOT NULL,
+    state               TEXT    NOT NULL,
+    version             INTEGER NOT NULL DEFAULT 0,
+    ticket_amount_paise INTEGER NOT NULL,
+    created_at          TEXT,
+    updated_at          TEXT
+);
+
+-- APPEND-ONLY. Nothing in this codebase UPDATEs or DELETEs this table. A wrong
+-- transition is corrected by appending another one, so the Day 10 ledger can
+-- reconstruct what we believed and when.
+CREATE TABLE IF NOT EXISTS case_transitions (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    case_id    TEXT NOT NULL,
+    from_state TEXT,
+    to_state   TEXT NOT NULL,
+    reason     TEXT,
+    event_id   TEXT,
+    at         TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_transitions_case ON case_transitions(case_id);
+
+-- One row per case, written once, before any model or heuristic reads the case.
+CREATE TABLE IF NOT EXISTS assignments (
+    case_id      TEXT PRIMARY KEY,
+    customer_id  TEXT NOT NULL,
+    arm          TEXT NOT NULL,
+    carved_out   INTEGER NOT NULL,
+    carve_reason TEXT,
+    assigned_at  TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_assignments_customer ON assignments(customer_id);
 """
 
 

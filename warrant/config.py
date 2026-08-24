@@ -47,6 +47,12 @@ ACTION_COST_INR = {
 EV_MARGIN_INR = 0.0
 """Expected value must exceed action cost by at least this margin to act."""
 
+HIGH_VALUE_THRESHOLD_PAISE = 500_000
+"""Carve-out threshold: a case with a ticket strictly above this is never held out.
+Rs 5,000. Not every business can accept a holdout on its largest accounts, and
+pretending otherwise would be dishonest product design (EXPERIMENT.md). Carved
+cases are still measured -- they are excluded from HOLDOUT, not from the ledger."""
+
 MAX_ATTEMPTS_PER_CASE = 3
 FREQUENCY_CAP_PER_CUSTOMER_7D = 2
 COHORT_SPEND_CEILING_INR = 5000.0
