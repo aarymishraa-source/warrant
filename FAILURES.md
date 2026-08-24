@@ -274,3 +274,62 @@ shipped-config variant of that test does NOT catch it, because `attempt_cap`
 fires first (F-009); the monkeypatched variant is the one that bites.
 
 ---
+
+## F-012 - Mutation check of the actuator's two load-bearing rules
+**Date:** Day 7
+
+**Not a failure.** Nothing broke while building `warrant/act.py`: the 26 tests
+passed on their first run. Recorded because "the tests passed" is not the claim
+being made -- F-005 is the reason that distinction is now written down every
+time.
+
+**Mutation A - call first, record afterwards.** `act.execute` was replaced with
+an actuator that makes the external call and then writes the intent, which is
+the design the module exists to reject. Caught by 7 tests, including both
+ordering tests:
+`test_intent_row_exists_before_the_external_call` (the injected callable asserts
+its own precondition) and
+`test_intent_is_committed_before_the_call_not_merely_written` (a second
+connection reads the ledger from inside the call, so a row written but not
+committed would not be visible).
+
+**Mutation B - timeout becomes FAILED.** The `TimeoutError` branch was changed
+to settle FAILED instead of UNKNOWN. Caught by 14 tests. The blast radius is the
+point: UNKNOWN is not a status the module mentions once, it is the state the
+whole reconcile/retry/cancel path is built around, so misclassifying it takes
+half the suite with it.
+
+**Restore verified by checksum**, not by assumption -- `warrant/act.py` was
+untracked at the time and `git checkout --` would have silently done nothing
+(F-006).
+
+---
+
+## F-013 - Two attempt counters that can disagree
+**Date:** Day 7
+
+**What broke.** Nothing yet, and that is why it is here rather than discovered
+on Day 8. There are now two ways to count attempts on a case:
+`policy.attempts_for_case()` counts transitions into `action_queued`, while
+`act.next_attempt()` counts rows in the intent ledger. They agree only if the
+controller writes both for every attempt.
+
+**Why.** Day 6 needed an attempt count before the intent ledger existed, so it
+counted the only record available at the time -- the state machine. Day 7 added
+a second record with a better claim to the number.
+
+**How detected.** Writing `next_attempt()` and noticing it answered a question
+`policy.attempts_for_case()` already answers differently.
+
+**What changed.** Nothing, deliberately. Changing the Day 6 gate to read the
+ledger would mean editing a module whose gates are already mutation-verified,
+for a wiring problem that belongs to the controller. `act.py` documents that it
+does not move the case through its state machine -- `core.transition()` needs
+the authoritative version at write time, and an actuator that guessed it would
+race the deliveries the version guard exists to survive.
+
+**Regression test.** None yet. The Day 8 controller must write the
+`action_queued` transition and create the intent in the same step, and that is
+where the test belongs.
+
+---

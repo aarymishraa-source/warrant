@@ -78,6 +78,26 @@ CREATE TABLE IF NOT EXISTS assignments (
 );
 
 CREATE INDEX IF NOT EXISTS idx_assignments_customer ON assignments(customer_id);
+
+-- The intent ledger. Written BEFORE the external call, never after: if the
+-- process dies mid-call the intent survives and reconciliation can find it.
+-- `idempotency_key` is OUR key and is UNIQUE here, which is what makes a
+-- duplicate execution impossible to insert rather than merely unlikely.
+-- See warrant/act.py.
+CREATE TABLE IF NOT EXISTS intents (
+    intent_id         TEXT    PRIMARY KEY,
+    case_id           TEXT    NOT NULL,
+    idempotency_key   TEXT    NOT NULL UNIQUE,
+    action_type       TEXT    NOT NULL,
+    action_cost_paise INTEGER NOT NULL,
+    status            TEXT    NOT NULL,
+    provider_ref      TEXT,
+    created_at        TEXT    NOT NULL,
+    resolved_at       TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_intents_case ON intents(case_id);
+CREATE INDEX IF NOT EXISTS idx_intents_status ON intents(status);
 """
 
 
