@@ -185,3 +185,92 @@ distinction is written into both module docstrings so it is not re-litigated.
 **Regression test.** `tests/test_assign.py::test_lending_emi_case_is_carved_out_and_never_holdout`.
 
 ---
+
+## F-009 - The regulatory gate is unreachable under the shipped configuration
+**Date:** Day 6
+
+**What broke.** `npci_autopay_cap` fires at `NPCI_AUTOPAY_MAX_ATTEMPTS` (4), but
+`attempt_cap` fires at `MAX_ATTEMPTS_PER_CASE` (3) and is evaluated first. No
+case can ever reach four attempts, so the one gate in the engine that enforces a
+real regulation can never be the gate that owns a verdict.
+
+**Why.** The two caps were set in different sections of `config.py` for
+different reasons -- one product policy, one NPCI -- and the gate order was
+specified separately from both. Nothing forced the three to be read together.
+
+**How detected.** Writing the test for the gate: there is no attempt count that
+satisfies `attempts >= 4` without first satisfying `attempts >= 3`.
+
+**What changed.** Nothing in the order or the values -- being stricter than the
+regulation is the correct direction, and reordering to make the gate fire would
+mean loosening the product cap. The gate is kept and documented as shadowed,
+because product policy is ours to loosen later and the regulation is not. The
+two NPCI tests lift the product caps with `monkeypatch` so the regulatory gate
+is exercised on its own terms.
+
+**Regression test.** `tests/test_policy.py::test_npci_cap_refuses_an_autopay_case_at_the_regulatory_limit`
+(the gate works when reachable) and
+`::test_npci_cap_does_not_fire_on_a_one_time_link_at_four_attempts` (it stays
+scoped to autopay). The second fails if the `case_type` check is removed --
+verified by mutation.
+
+---
+
+## F-010 - Two gate tests asserted a state the caps make unreachable
+**Date:** Day 6
+
+**What broke.** `test_one_attempt_below_the_cap_still_executes` and the
+one_time_link NPCI test both expected EXECUTE at 2 and 4 attempts respectively.
+Both returned DO_NOTHING under `frequency_cap`. A case's own attempts are also
+contacts to that case's customer, and the customer cap (2 per 7 days) is
+stricter than the per-case cap (3), so a case that burns its attempts inside one
+week is stopped at two -- by the customer gate, not the case gate.
+
+**Why.** The two caps read as independent because they are configured
+independently and named for different units, per-case and per-customer. They
+share a counter: every attempt is a contact.
+
+**How detected.** The first run of `tests/test_policy.py`: 2 failed, 26 passed.
+The failure message named `frequency_cap` as the rule that fired.
+
+**What changed.** The behaviour is correct and was left alone -- a customer with
+three failed payments is still one person being messaged. The tests were wrong,
+not the engine. `test_frequency_cap_shadows_the_attempt_cap_inside_the_window`
+now pins the interaction explicitly, and the NPCI tests lift both product caps
+rather than only the per-case one.
+
+**Regression test.** `tests/test_policy.py::test_frequency_cap_shadows_the_attempt_cap_inside_the_window`.
+
+---
+
+## F-011 - Mutation sweep of all nine gates
+**Date:** Day 6
+
+**Not a failure.** Recorded because the absence of one is the claim, and F-005
+showed that "the tests pass" and "the tests would catch it" are different
+statements.
+
+Each gate was removed from `policy.GATES` in turn (via a scratch pytest plugin,
+not committed) and the policy suite re-run. Every gate was caught by at least
+the test written for it:
+
+| dropped gate | tests that failed |
+|---|---|
+| `arm_holdout` | 2 |
+| `terminal_state` | 2 |
+| `attempt_cap` | 3 |
+| `npci_autopay_cap` | 1 |
+| `frequency_cap` | 2 |
+| `cohort_spend` | 1 |
+| `low_confidence` | 1 |
+| `unknown_action` | 1 |
+| `ev_threshold` | 5 |
+
+Separately, removing the `case_type == 'upi_autopay'` condition from
+`gate_npci_autopay_cap` -- making the regulatory gate universal, the F-002
+over-claim in code form -- was caught by
+`test_npci_cap_does_not_fire_on_a_one_time_link_at_four_attempts`. Note that the
+shipped-config variant of that test does NOT catch it, because `attempt_cap`
+fires first (F-009); the monkeypatched variant is the one that bites.
+
+---
