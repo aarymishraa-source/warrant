@@ -5,11 +5,7 @@
 Recovery rate tells us what happened after an intervention.
 It doesn't tell us what the intervention caused.
 
-Warrant is a counterfactual payment-recovery controller. When a payment fails
-it does not ask "what message should we send?" It asks "should we intervene at
-all?" - estimates the probability the customer recovers unaided, computes
-whether intervening clears its own cost, applies deterministic policy gates,
-and then either acts or deliberately does nothing.
+Warrant doesn't optimize for recovered payments. It estimates which recoveries were actually caused by intervention, then spends money only when the expected incremental recovery justifies the intervention.
 
 DO_NOTHING is a scored economic decision, not a fallback.
 
