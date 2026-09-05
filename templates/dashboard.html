@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WARRANT — Control Plane</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --canvas: #faf9f5;
+      --surface-soft: #f5f0e8;
+      --surface-card: #efe9de;
+      --surface-cream: #e8e0d2;
+      --ink: #141413;
+      --ink-strong: #252523;
+      --ink-mid: #3d3d3a;
+      --ink-light: #6c6a64;
+      --ink-faint: #8e8b82;
+      --hairline: #e6dfd8;
+      --hairline-soft: #ebe6df;
+      --coral: #cc785c;
+      --coral-active: #a9583e;
+      --coral-bg: rgba(204, 120, 92, 0.08);
+      --coral-bg-strong: rgba(204, 120, 92, 0.14);
+      --teal: #5db8a6;
+      --amber: #b45309;
+      --amber-bg: rgba(180, 83, 9, 0.08);
+      --red: #b91c1c;
+      --red-bg: rgba(185, 28, 28, 0.08);
+    }
+
+    html {
+      background: var(--canvas);
+      color: var(--ink);
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      font-feature-settings: "tnum";
+    }
+
+    .mono { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
+    .serif { font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 400; }
+    .page { max-width: 1120px; margin: 0 auto; padding: 0 48px; }
+
+    /* ─── Header ─────────────────────────────────────────────── */
+    .header { padding: 20px 0; border-bottom: 1px solid var(--hairline); }
+    .header-inner { display: flex; justify-content: space-between; align-items: baseline; }
+    .brand { font-size: 12px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink); }
+    .brand-sub { font-size: 11px; color: var(--ink-light); margin-top: 2px; }
+    .header-right { display: flex; align-items: center; gap: 16px; }
+    .lane-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 10px; }
+    .lane-badge.sim { background: var(--amber-bg); border: 1px solid rgba(180,83,9,0.18); color: var(--amber); }
+    .lane-badge.offline { background: var(--surface-soft); border: 1px solid var(--hairline); color: var(--ink-faint); }
+    .lane-dot { width: 5px; height: 5px; border-radius: 50%; }
+    .lane-badge.sim .lane-dot { background: var(--amber); }
+    .lane-badge.offline .lane-dot { background: var(--ink-faint); }
+    .clock { font-size: 11px; color: var(--ink-faint); }
+    .demo-badge { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; padding: 3px 8px; background: var(--surface-cream); border: 1px solid var(--hairline); color: var(--ink-faint); }
+
+    /* ─── Nav ────────────────────────────────────────────────── */
+    .nav { padding: 0; border-bottom: 1px solid var(--hairline); }
+    .nav-inner { display: flex; gap: 0; }
+    .nav-link { display: block; padding: 12px 20px; font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-faint); text-decoration: none; border-bottom: 2px solid transparent; transition: color 0.15s; }
+    .nav-link:hover { color: var(--ink); }
+    .nav-link.active { color: var(--ink); border-bottom-color: var(--coral); }
+
+    /* ─── Section shared ──────────────────────────────────────── */
+    .section { padding: 48px 0; border-bottom: 1px solid var(--hairline); }
+    .section:last-child { border-bottom: none; }
+    .eyebrow { font-size: 10px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-light); margin-bottom: 6px; }
+    .heading { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 22px; font-weight: 400; color: var(--ink); margin-bottom: 4px; }
+    .subhead { font-size: 12px; color: var(--ink-faint); }
+
+    /* ─── Recovery Impact ─────────────────────────────────────── */
+    .impact-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 48px; margin-top: 28px; }
+    .comp-arm-row { display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px; }
+    .comp-arm-label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; min-width: 90px; }
+    .comp-arm-label.holdout { color: var(--ink-faint); }
+    .comp-arm-label.baseline { color: var(--ink-mid); }
+    .comp-arm-label.treatment { color: var(--coral); }
+    .comp-rate { font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 600; color: var(--ink); }
+    .comp-n { font-size: 11px; color: var(--ink-faint); margin-left: auto; }
+    .comp-lift-row { display: flex; gap: 24px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--hairline-soft); }
+    .lift-block { }
+    .lift-label { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 2px; }
+    .lift-value { font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 600; }
+    .lift-value.positive { color: var(--coral); }
+    .lift-value.negative { color: var(--red); }
+    .lift-value.neutral { color: var(--ink-faint); }
+    .lift-ci { font-size: 11px; color: var(--ink-faint); font-family: 'JetBrains Mono', monospace; }
+
+    .ci-track { position: relative; height: 40px; margin-top: 12px; }
+    .ci-axis { position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: var(--hairline); transform: translateY(-50%); }
+    .ci-zero { position: absolute; top: 0; bottom: 0; left: 50%; width: 1px; background: var(--ink-faint); opacity: 0.4; }
+    .ci-bar { position: absolute; top: 12px; height: 16px; border-radius: 2px; opacity: 0.35; }
+    .ci-bar.positive { background: var(--coral); }
+    .ci-bar.negative { background: var(--red); }
+    .ci-bar.neutral { background: var(--ink-faint); }
+    .ci-point { position: absolute; top: 8px; width: 6px; height: 24px; border-radius: 3px; transform: translateX(-50%); }
+    .ci-point.positive { background: var(--coral); }
+    .ci-point.negative { background: var(--red); }
+    .ci-point.neutral { background: var(--ink-faint); }
+    .ci-axis-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--ink-faint); font-family: 'JetBrains Mono', monospace; margin-top: 4px; }
+
+    .status-tag { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; border-radius: 3px; }
+    .status-tag.active { background: var(--amber-bg); color: var(--amber); }
+    .status-tag.sim { background: var(--surface-soft); color: var(--ink-faint); }
+    .status-tag.closed { background: var(--coral-bg); color: var(--coral); }
+    .status-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+
+    .impact-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .stat-box { background: var(--surface-soft); border: 1px solid var(--hairline); padding: 14px 16px; }
+    .stat-box-label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 4px; }
+    .stat-box-value { font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 600; color: var(--ink); }
+    .stat-box-sub { font-size: 10px; color: var(--ink-faint); margin-top: 2px; }
+
+    /* ─── Experiment Allocation ───────────────────────────────── */
+    .allocation-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-top: 24px; }
+    .alloc-card { border: 1px solid var(--hairline); padding: 20px; }
+    .alloc-arm-label { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 4px; }
+    .alloc-arm-label.holdout { color: var(--ink-faint); }
+    .alloc-arm-label.baseline { color: var(--ink-mid); }
+    .alloc-arm-label.treatment { color: var(--coral); }
+    .alloc-desc { font-size: 11px; color: var(--ink-faint); margin-bottom: 16px; }
+    .alloc-bar-track { height: 6px; background: var(--hairline); margin-bottom: 8px; }
+    .alloc-bar-fill { height: 100%; border-radius: 3px; }
+    .alloc-bar-fill.holdout { background: var(--ink-faint); }
+    .alloc-bar-fill.baseline { background: var(--ink-mid); }
+    .alloc-bar-fill.treatment { background: var(--coral); }
+    .alloc-n { font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 600; color: var(--ink); }
+    .alloc-n-sub { font-size: 10px; color: var(--ink-faint); }
+
+    /* ─── Recovery Funnel ──────────────────────────────────────── */
+    .funnel-track { margin-top: 28px; }
+    .funnel-row { display: grid; grid-template-columns: 200px 1fr 80px 60px; gap: 16px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--hairline-soft); }
+    .funnel-row:last-child { border-bottom: none; }
+    .funnel-label { font-size: 12px; color: var(--ink-mid); }
+    .funnel-bar-track { height: 10px; background: var(--hairline); position: relative; }
+    .funnel-bar-fill { position: absolute; top: 0; left: 0; height: 100%; border-radius: 5px; }
+    .funnel-bar-fill.assigned { background: var(--ink-faint); }
+    .funnel-bar-fill.proposed { background: var(--amber); }
+    .funnel-bar-fill.executed { background: var(--coral); }
+    .funnel-bar-fill.resolved { background: var(--teal); }
+    .funnel-bar-fill.recovered { background: var(--coral); opacity: 0.6; }
+    .funnel-count { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 600; color: var(--ink); text-align: right; }
+    .funnel-pct { font-size: 11px; color: var(--ink-faint); text-align: right; }
+    .funnel-note { font-size: 11px; color: var(--ink-faint); margin-top: 16px; font-style: italic; }
+
+    /* ─── Policy Governance ───────────────────────────────────── */
+    .policy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 28px; }
+    .policy-split-label { font-size: 10px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-light); margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--hairline); }
+    .policy-statement { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 16px; font-style: italic; color: var(--ink-mid); margin-bottom: 20px; }
+    .policy-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--hairline-soft); }
+    .policy-row:last-child { border-bottom: none; }
+    .policy-pill { display: inline-flex; align-items: center; justify-content: center; min-width: 70px; padding: 3px 8px; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; border-radius: 3px; }
+    .policy-pill.execute { background: var(--coral-bg-strong); color: var(--coral-active); }
+    .policy-pill.refused { background: var(--red-bg); color: var(--red); }
+    .policy-pill.unknown { background: var(--amber-bg); color: var(--amber); }
+    .policy-pill.pending { background: var(--surface-soft); color: var(--ink-faint); }
+    .policy-count { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 600; color: var(--ink); }
+    .policy-pct { font-size: 11px; color: var(--ink-faint); }
+    .policy-bar-track { flex: 1; height: 4px; background: var(--hairline); }
+    .policy-bar-fill { height: 100%; border-radius: 2px; }
+    .policy-bar-fill.execute { background: var(--coral); }
+    .policy-bar-fill.refused { background: var(--red); }
+    .policy-bar-fill.unknown { background: var(--amber); }
+    .policy-bar-fill.pending { background: var(--ink-faint); }
+
+    /* ─── Intent Ledger ───────────────────────────────────────── */
+    .ledger-table-wrap { margin-top: 24px; overflow-x: auto; }
+    .ledger-table { width: 100%; border: 1px solid var(--hairline); border-collapse: collapse; min-width: 640px; }
+    .ledger-table th { text-align: left; padding: 10px 14px; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-light); background: var(--surface-soft); border-bottom: 1px solid var(--hairline); white-space: nowrap; }
+    .ledger-table td { padding: 10px 14px; font-size: 12px; color: var(--ink-mid); border-bottom: 1px solid var(--hairline-soft); vertical-align: middle; }
+    .ledger-table tr:last-child td { border-bottom: none; }
+    .ledger-table td:first-child { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-faint); white-space: nowrap; }
+    .ledger-table td:last-child { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-faint); white-space: nowrap; }
+    .status-pill { display: inline-block; padding: 2px 7px; font-size: 9px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; border-radius: 3px; white-space: nowrap; }
+    .status-pill.executed { background: var(--coral-bg); color: var(--coral); }
+    .status-pill.failed { background: var(--red-bg); color: var(--red); }
+    .status-pill.pending { background: var(--amber-bg); color: var(--amber); }
+    .status-pill.unknown { background: var(--amber-bg); color: var(--amber); }
+    .arm-tag { display: inline-block; padding: 2px 7px; font-size: 9px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; border-radius: 3px; }
+    .arm-tag.holdout { background: var(--surface-soft); color: var(--ink-faint); }
+    .arm-tag.baseline { background: var(--surface-card); color: var(--ink-mid); }
+    .arm-tag.treatment { background: var(--coral-bg); color: var(--coral-active); }
+    .ledger-total { font-size: 11px; color: var(--ink-faint); margin-top: 10px; }
+
+    /* ─── Recent Decisions ────────────────────────────────────── */
+    .decisions-table-wrap { margin-top: 24px; overflow-x: auto; }
+    .decisions-table { width: 100%; border: 1px solid var(--hairline); border-collapse: collapse; min-width: 600px; }
+    .decisions-table th { text-align: left; padding: 10px 14px; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-light); background: var(--surface-soft); border-bottom: 1px solid var(--hairline); }
+    .decisions-table td { padding: 9px 14px; font-size: 12px; color: var(--ink-mid); border-bottom: 1px solid var(--hairline-soft); vertical-align: middle; }
+    .decisions-table tr:last-child td { border-bottom: none; }
+    .decisions-table td:first-child { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-faint); }
+    .decisions-table td:nth-child(2) { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-faint); }
+
+    /* ─── Comparisons ─────────────────────────────────────────── */
+    .comp-section { padding: 48px 0; border-bottom: 1px solid var(--hairline); }
+    .comp-table { width: 100%; border: 1px solid var(--hairline); border-collapse: collapse; margin-top: 24px; }
+    .comp-table th { text-align: left; padding: 11px 14px; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-light); background: var(--surface-soft); border-bottom: 1px solid var(--hairline); }
+    .comp-table td { padding: 14px 14px; font-size: 12px; color: var(--ink-mid); border-bottom: 1px solid var(--hairline-soft); vertical-align: middle; }
+    .comp-table tr:last-child td { border-bottom: none; }
+    .ci-val { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 600; }
+    .ci-val.positive { color: var(--coral); }
+    .ci-val.negative { color: var(--red); }
+    .ci-val.inconclusive { color: var(--ink-faint); }
+    .verdict-tag { display: inline-block; padding: 2px 8px; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; border-radius: 3px; }
+    .verdict-tag.positive { background: var(--coral-bg); color: var(--coral); }
+    .verdict-tag.negative { background: var(--red-bg); color: var(--red); }
+    .verdict-tag.inconclusive { background: var(--surface-soft); color: var(--ink-faint); }
+    .verdict-tag.insufficient { background: var(--surface-soft); color: var(--ink-faint); }
+    .ci-mini-track { position: relative; height: 10px; width: 120px; background: var(--hairline); margin-top: 4px; }
+    .ci-mini-bar { position: absolute; top: 0; height: 100%; border-radius: 5px; }
+    .ci-mini-bar.positive { background: var(--coral); opacity: 0.5; }
+    .ci-mini-bar.negative { background: var(--red); opacity: 0.5; }
+    .ci-mini-bar.inconclusive { background: var(--ink-faint); opacity: 0.4; }
+    .ci-mini-zero { position: absolute; top: 0; bottom: 0; left: 50%; width: 1px; background: var(--ink-faint); opacity: 0.5; }
+    .ci-mini-point { position: absolute; top: -2px; width: 4px; height: 14px; border-radius: 2px; transform: translateX(-50%); }
+    .ci-mini-point.positive { background: var(--coral); }
+    .ci-mini-point.negative { background: var(--red); }
+    .ci-mini-point.inconclusive { background: var(--ink-faint); }
+
+    /* ─── Error ───────────────────────────────────────────────── */
+    .error-box { background: var(--red-bg); border: 1px solid rgba(185,28,28,0.2); padding: 16px 20px; margin: 24px 0; }
+    .error-label { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--red); margin-bottom: 4px; }
+    .error-message { font-size: 12px; color: var(--red); }
+
+    /* ─── Responsive ──────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .page { padding: 0 20px; }
+      .impact-grid { grid-template-columns: 1fr; gap: 24px; }
+      .allocation-grid { grid-template-columns: 1fr; }
+      .policy-grid { grid-template-columns: 1fr; }
+      .comp-arm-row { flex-wrap: wrap; }
+    }
+  </style>
+</head>
+<body>
+
+{% if error %}
+<div class="error-box">
+  <div class="error-label mono">Render Error</div>
+  <div class="error-message">{{ error }}</div>
+</div>
+{% endif %}
+
+<!-- ─── Header ──────────────────────────────────────────────── -->
+<header class="header">
+  <div class="page">
+    <div class="header-inner">
+      <div>
+        <div class="brand">WARRANT</div>
+        <div class="brand-sub">Experiment Control Plane</div>
+      </div>
+      <div class="header-right">
+        <span class="demo-badge">SIMULATION</span>
+        {% for lane in lanes %}
+        <span class="lane-badge {{ lane.css_class }}">
+          <span class="lane-dot"></span>
+          {{ lane.label }}
+        </span>
+        {% endfor %}
+        <span class="clock mono" id="clock">—</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ─── Nav ────────────────────────────────────────────────── -->
+<nav class="nav">
+  <div class="page">
+    <div class="nav-inner">
+      <a class="nav-link" href="/">Landing</a>
+      <a class="nav-link active" href="/dashboard">Control Plane</a>
+    </div>
+  </div>
+</nav>
+
+<main class="page">
+
+  <!-- ── RECOVERY IMPACT ─────────────────────────────────── -->
+  <section class="section">
+    <div class="eyebrow">Recovery Impact</div>
+    <h1 class="heading">Intent-to-Treat Analysis — 7-Day Window</h1>
+    <p class="subhead">Simulation of {{ holdout_n + warrant_n + rules_n }} enrolled cases. Confidence intervals via Newcombe Method 10 at 90%.</p>
+
+    <div class="impact-grid">
+      <div class="impact-main">
+        <!-- Arm comparison bars -->
+        {% for arm in arm_data %}
+        {% if arm.name != 'CARVE_OUT' %}
+        <div class="comparison-bar-wrap">
+          <div class="comp-arm-row">
+            <span class="comp-arm-label {{ arm.tag_class }}">{{ arm.tag_label }}</span>
+            <span class="comp-rate">{{ arm.rate_str }}</span>
+            <span class="comp-n">{{ arm.n }} cases</span>
+          </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+
+        <!-- CI bar for WARRANT vs HOLDOUT -->
+        {% for row in comparison_rows %}
+        {% if row.label == 'WARRANT vs HOLDOUT' %}
+        <div class="ci-track">
+          <div class="ci-axis"></div>
+          <div class="ci-zero"></div>
+          <div class="ci-bar {{ row.css_class }}" style="left: {{ row.css_left_pct }}%; width: {{ row.css_width_pct }}%;"></div>
+          <div class="ci-point {{ row.css_class }}" style="left: {{ row.css_point_pct }}%;"></div>
+        </div>
+        <div class="ci-axis-labels">
+          <span>-40%</span>
+          <span>0%</span>
+          <span>+40%</span>
+        </div>
+        {% endif %}
+        {% endfor %}
+
+        <!-- Lift callout -->
+        <div class="comp-lift-row">
+          <div class="lift-block">
+            <div class="lift-label">WARRANT vs HOLDOUT</div>
+            <div class="lift-value {% if warrant_lift and warrant_lift > 0 %}positive{% elif warrant_lift and warrant_lift < 0 %}negative{% else %}neutral{% endif %}">
+              {% if warrant_lift is not none %}{{ '+' if warrant_lift > 0 }}{{ warrant_lift }}pp{% else %}—{% endif %}
+            </div>
+            {% for row in comparison_rows %}
+            {% if row.label == 'WARRANT vs HOLDOUT' %}
+            <div class="lift-ci">90% CI [{{ row.ci_lower_str }} — {{ row.ci_upper_str }}]</div>
+            {% endif %}
+            {% endfor %}
+          </div>
+          <div class="lift-block">
+            <div class="lift-label">RULES vs HOLDOUT</div>
+            <div class="lift-value {% if rules_lift and rules_lift > 0 %}positive{% elif rules_lift and rules_lift < 0 %}negative{% else %}neutral{% endif %}">
+              {% if rules_lift is not none %}{{ '+' if rules_lift > 0 }}{{ rules_lift }}pp{% else %}—{% endif %}
+            </div>
+            {% for row in comparison_rows %}
+            {% if row.label == 'RULES vs HOLDOUT' %}
+            <div class="lift-ci">90% CI [{{ row.ci_lower_str }} — {{ row.ci_upper_str }}]</div>
+            {% endif %}
+            {% endfor %}
+          </div>
+          <div class="lift-block" style="margin-left: auto;">
+            <div class="lift-label">Experiment Status</div>
+            <span class="status-tag {{ exp_css }}">
+              <span class="status-dot"></span>
+              {{ exp_status }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="impact-col">
+        <div class="impact-stats">
+          <div class="stat-box">
+            <div class="stat-box-label">HOLDOUT Rate</div>
+            <div class="stat-box-value">{% if holdout_rate is not none %}{{ holdout_rate }}%{% else %}—{% endif %}</div>
+            <div class="stat-box-sub">{{ holdout_n }} cases</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-label">WARRANT Rate</div>
+            <div class="stat-box-value">{% if warrant_rate is not none %}{{ warrant_rate }}%{% else %}—{% endif %}</div>
+            <div class="stat-box-sub">{{ warrant_n }} cases</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-label">RULES Rate</div>
+            <div class="stat-box-value">{% if rules_rate is not none %}{{ rules_rate }}%{% else %}—{% endif %}</div>
+            <div class="stat-box-sub">{{ rules_n }} cases</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-label">Total Assigned</div>
+            <div class="stat-box-value">{{ total_assigned }}</div>
+            <div class="stat-box-sub">{{ total_recovered }} recovered overall</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── EXPERIMENT ALLOCATION ───────────────────────────── -->
+  <section class="section">
+    <div class="eyebrow">Experiment Allocation</div>
+    <h2 class="heading">Target Enrollment — HOLDOUT 20% · RULES 40% · WARRANT 40%</h2>
+    <p class="subhead">Random assignment via deterministic SHA-256 bucket allocation. Customer ID is the unit of assignment.</p>
+
+    <div class="allocation-grid">
+      <div class="alloc-card">
+        <div class="alloc-arm-label holdout">HOLDOUT</div>
+        <div class="alloc-desc">No automated recovery action. Baseline recovery rate for causal inference.</div>
+        <div class="alloc-bar-track"><div class="alloc-bar-fill holdout" style="width: 20%;"></div></div>
+        <div class="alloc-n">{{ holdout_n }}</div>
+        <div class="alloc-n-sub">cases enrolled</div>
+        <div class="alloc-pct">20% target</div>
+      </div>
+      <div class="alloc-card">
+        <div class="alloc-arm-label baseline">RULES</div>
+        <div class="alloc-desc">Deterministic policy. Rule-based retry schedule. Baseline treatment arm.</div>
+        <div class="alloc-bar-track"><div class="alloc-bar-fill baseline" style="width: 40%;"></div></div>
+        <div class="alloc-n">{{ rules_n }}</div>
+        <div class="alloc-n-sub">cases enrolled</div>
+        <div class="alloc-pct">40% target</div>
+      </div>
+      <div class="alloc-card">
+        <div class="alloc-arm-label treatment">WARRANT</div>
+        <div class="alloc-desc">LLM-proposed + policy-governed. Full intent ledger with provider tracking.</div>
+        <div class="alloc-bar-track"><div class="alloc-bar-fill treatment" style="width: 40%;"></div></div>
+        <div class="alloc-n">{{ warrant_n }}</div>
+        <div class="alloc-n-sub">cases enrolled</div>
+        <div class="alloc-pct">40% target</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── RECOVERY FUNNEL ────────────────────────────────── -->
+  <section class="section">
+    <div class="eyebrow">Recovery Funnel</div>
+    <h2 class="heading">What Happens to a Failed Payment</h2>
+
+    <div class="funnel-track">
+      <div class="funnel-row" style="border-bottom: 1px solid var(--hairline); padding-bottom: 14px;">
+        <div class="funnel-label" style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-faint);">Stage</div>
+        <div class="funnel-label" style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-faint);">Flow</div>
+        <div class="funnel-count" style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-faint); text-align: right;">Count</div>
+        <div class="funnel-pct" style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-faint); text-align: right;">%</div>
+      </div>
+      {% for stage in funnel_data.stages %}
+      <div class="funnel-row">
+        <div class="funnel-label">{{ stage.label }}</div>
+        <div class="funnel-bar-track">
+          <div class="funnel-bar-fill {{ stage.css_class }}" style="width: {{ stage.pct }}%;"></div>
+        </div>
+        <div class="funnel-count">{{ stage.count }}</div>
+        <div class="funnel-pct">{{ "%.1f"|format(stage.pct) }}%</div>
+      </div>
+      {% endfor %}
+    </div>
+    <p class="funnel-note">* "Incremental Recovery" denotes cases resolved via intent execution. Incrementality is established by the experiment comparison, not by this funnel.</p>
+  </section>
+
+  <!-- ── POLICY GOVERNANCE ──────────────────────────────── -->
+  <section class="section">
+    <div class="eyebrow">Policy Governance</div>
+    <h2 class="heading">Model Proposes. Policy Decides.</h2>
+    <p class="subhead">Provider outcome breakdown for all intents issued under the treatment policy.</p>
+
+    <div class="policy-grid">
+      <div>
+        <div class="policy-split-label">Provider Outcomes</div>
+        {% for prow in policy_data.rows %}
+        <div class="policy-row" {% if prow.count == 0 %}style="opacity: 0.5;"{% endif %}>
+          <span class="policy-pill {{ prow.css_class }}">{{ prow.label }}</span>
+          <span class="policy-count">{{ prow.count }}</span>
+          <div class="policy-bar-track"><div class="policy-bar-fill {{ prow.css_class }}" style="width: {{ prow.pct }}%;"></div></div>
+          <span class="policy-pct">{{ "%.1f"|format(prow.pct) }}%</span>
+        </div>
+        {% endfor %}
+      </div>
+      <div>
+        <div class="policy-split-label">Gate Criteria</div>
+        <p class="policy-statement">An intent executes only when the LLM proposal passes policy review.</p>
+        <div class="policy-row" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+          <span style="font-size: 11px; font-weight: 600; color: var(--ink-mid);">EXECUTE</span>
+          <span style="font-size: 11px; color: var(--ink-faint);">Policy approved. Provider received the intent. Provider resolved EXECUTED.</span>
+        </div>
+        <div class="policy-row" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+          <span style="font-size: 11px; font-weight: 600; color: var(--ink-mid);">REFUSED</span>
+          <span style="font-size: 11px; color: var(--ink-faint);">Provider declined the intent. No recovery action taken.</span>
+        </div>
+        <div class="policy-row" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+          <span style="font-size: 11px; font-weight: 600; color: var(--amber);">UNKNOWN ≠ FAILED</span>
+          <span style="font-size: 11px; color: var(--ink-faint);">Provider state is unresolved. Reconciliation required before marking resolved.</span>
+        </div>
+        <div class="policy-row" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+          <span style="font-size: 11px; font-weight: 600; color: var(--ink-mid);">PENDING</span>
+          <span style="font-size: 11px; color: var(--ink-faint);">Intent issued. Provider has not yet resolved. Awaiting callback or timeout.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── INTENT LEDGER ──────────────────────────────────── -->
+  <section class="section">
+    <div class="eyebrow">Intent Ledger</div>
+    <h2 class="heading">Audit Trail — Recent Intents</h2>
+    <p class="subhead">Append-only log of every intent issued. Provider state is authoritative.</p>
+
+    <div class="ledger-table-wrap">
+      <table class="ledger-table">
+        <thead>
+          <tr>
+            <th>Intent ID</th>
+            <th>Case ID</th>
+            <th>Action</th>
+            <th>Status</th>
+            <th>Provider Ref</th>
+            <th>Issued</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for entry in ledger_data.entries %}
+          <tr>
+            <td>{{ entry.intent_id }}</td>
+            <td>{{ entry.case_id }}</td>
+            <td>{{ entry.action_type }}</td>
+            <td><span class="status-pill {{ entry.status|lower }}">{{ entry.status }}</span></td>
+            <td>{{ entry.external_ref if entry.external_ref else '—' }}</td>
+            <td>{{ entry.created_at[:19] }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <p class="ledger-total">{{ ledger_data.total }} total intents in ledger.</p>
+    </div>
+  </section>
+
+  <!-- ── RECENT DECISIONS ───────────────────────────────── -->
+  <section class="section">
+    <div class="eyebrow">Recent Decisions</div>
+    <h2 class="heading">Operational View — Last 10 Intents</h2>
+
+    <div class="decisions-table-wrap">
+      <table class="decisions-table">
+        <thead>
+          <tr>
+            <th>Case</th>
+            <th>Customer</th>
+            <th>Arm</th>
+            <th>Action</th>
+            <th>Outcome</th>
+            <th>Issued</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in recent_decisions %}
+          <tr>
+            <td>{{ d.case_id }}</td>
+            <td>{{ d.customer_id }}</td>
+            <td>
+              <span class="arm-tag {{ d.arm_class }}">
+                {% if d.arm == 'CARVE_OUT' %}CARVED{% else %}{{ d.arm }}{% endif %}
+              </span>
+            </td>
+            <td>{{ d.action_type }}</td>
+            <td><span class="status-pill {{ d.status_class }}">{{ d.status }}</span></td>
+            <td>{{ d.created_at[:19] }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── COMPARISONS ────────────────────────────────────── -->
+  {% if comparison_rows %}
+  <section class="comp-section">
+    <div class="eyebrow">Causal Comparisons</div>
+    <h2 class="heading" style="margin-bottom: 0;">Newcombe Method 10 — 90% Confidence Intervals</h2>
+
+    <table class="comp-table">
+      <thead>
+        <tr>
+          <th>Pair</th>
+          <th>Difference</th>
+          <th>CI</th>
+          <th>Verdict</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in comparison_rows %}
+        <tr>
+          <td>{{ row.label }}</td>
+          <td>
+            <span class="ci-val {{ row.verdict }}">{{ row.diff_str }}</span>
+            <div class="ci-mini-track">
+              <div class="ci-mini-bar {{ row.verdict }}" style="left: {{ row.css_left_pct }}%; width: {{ row.css_width_pct }}%;"></div>
+              <div class="ci-mini-zero"></div>
+              <div class="ci-mini-point {{ row.verdict }}" style="left: {{ row.css_point_pct }}%;"></div>
+            </div>
+          </td>
+          <td><span class="ci-val {{ row.verdict }}">{{ row.ci_lower_str }} — {{ row.ci_upper_str }}</span></td>
+          <td>
+            <span class="verdict-tag {{ row.verdict }}">
+              {% if row.verdict == 'positive' %}Warrant better
+              {% elif row.verdict == 'negative' %}Warrant worse
+              {% elif row.verdict == 'inconclusive' %}Inconclusive
+              {% else %}Insufficient data{% endif %}
+            </span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% endif %}
+
+</main>
+
+<script>
+(function(){
+  function tick() {
+    var el = document.getElementById('clock');
+    if (el) {
+      var d = new Date();
+      var pad = function(n){ return n < 10 ? '0' + n : n; };
+      el.textContent = d.getUTCFullYear() + '-'
+        + pad(d.getUTCMonth() + 1) + '-'
+        + pad(d.getUTCDate()) + ' '
+        + pad(d.getUTCHours()) + ':'
+        + pad(d.getUTCMinutes()) + ':'
+        + pad(d.getUTCSeconds()) + ' UTC';
+    }
+  }
+  tick();
+  setInterval(tick, 1000);
+})();
+</script>
+
+</body>
+</html>

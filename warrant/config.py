@@ -28,6 +28,10 @@ P_WARRANT_ASSUMED = 0.39
 
 OBSERVATION_WINDOW_DAYS = 7
 
+# Minimum per-arm N for 80% power at alpha=0.05 two-sided to detect +5pp
+# (0.34 -> 0.39). Derived via normal-approximation two-proportion formula.
+PREREGISTERED_SAMPLE_SIZE = 568
+
 PRIMARY_COMPARISON = ("WARRANT", "HOLDOUT")
 SECONDARY_COMPARISON = ("RULES", "HOLDOUT")  # exploratory, not powered
 

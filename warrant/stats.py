@@ -92,6 +92,35 @@ class DiffResult:
             f"  {'significant' if self.excludes_zero else 'CI CROSSES ZERO'}"
         )
 
+    # ── CSS bar helpers ────────────────────────────────────────────────────────────
+    # Maps proportion [-1, 1] → percentage [0, 100] for the CI visualization.
+    # Zero (no effect) is at 50%. Left edge is −100%, right edge is +100%.
+
+    def _pct(self, p: float) -> float:
+        return float(max(0.0, min(100.0, (p + 1.0) * 50.0)))
+
+    @property
+    def css_left_pct(self) -> float:
+        return self._pct(self.lower)
+
+    @property
+    def css_width_pct(self) -> float:
+        left = self._pct(self.lower)
+        right = self._pct(self.upper)
+        return float(max(0.0, min(100.0 - left, right - left)))
+
+    @property
+    def css_point_pct(self) -> float:
+        return self._pct(self.difference)
+
+    @property
+    def css_class(self) -> str:
+        if self.lower > 0:
+            return "positive"
+        if self.upper < 0:
+            return "negative"
+        return "neutral"
+
 
 def newcombe_diff_ci(
     successes_treat: int,

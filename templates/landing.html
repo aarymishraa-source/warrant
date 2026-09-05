@@ -1,0 +1,2575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>WARRANT — Payment Recovery Infrastructure</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%23111110'/><text x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' fill='%23f5f0e8' font-family='serif' font-size='18' font-weight='500'>W</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --canvas: #f5f0e8;
+      --surface-soft: #eae3d7;
+      --surface-card: #ece6dc;
+      --surface-dark: #0e0e0d;
+      --surface-dark-mid: #161615;
+      --surface-dark-light: #242422;
+      --surface-dark-card: #141413;
+      --ink: #111110;
+      --ink-mid: #2b2a27;
+      --ink-light: #525048;
+      --ink-faint: #78756c;
+      --hairline: #c8c0b2;
+      --hairline-soft: #ded7cb;
+      --slate: #1e3d5c;
+      --slate-mid: #2a5275;
+      --slate-light: #c2d5e8;
+      --positive: #185c37;
+      --positive-bg: #d7ede1;
+      --positive-border: #72b893;
+      --warning: #855208;
+      --warning-bg: #faeecf;
+      --warning-border: #d4b068;
+      --failure: #8a2424;
+      --failure-bg: #f5dada;
+      --failure-border: #d48a8a;
+      --mono: 'JetBrains Mono', 'Courier New', monospace;
+      --serif: 'Cormorant Garamond', Georgia, serif;
+      --sans: 'DM Sans', system-ui, -apple-system, sans-serif;
+    }
+
+    html, body {
+      width: 100%;
+      max-width: 100vw;
+      overflow-x: hidden;
+      width: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
+      background: var(--canvas);
+      color: var(--ink);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      scroll-behavior: smooth;
+    }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--canvas); }
+    ::-webkit-scrollbar-thumb { background: var(--hairline); border-radius: 3px; }
+    ::selection { background: var(--slate-light); color: var(--ink); }
+    :focus-visible { outline: 2px solid var(--slate); outline-offset: 3px; }
+
+    h1, h2, h3 { font-family: var(--serif); font-weight: 400; line-height: 1.15; }
+    h1 { font-size: clamp(32px, 4.6vw, 56px); letter-spacing: -0.015em; }
+    h2 { font-size: clamp(23px, 3.2vw, 38px); letter-spacing: -0.01em; }
+    h3 { font-size: clamp(18px, 2.2vw, 24px); }
+
+    .mono { font-family: var(--mono); }
+
+    .section-eyebrow {
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      margin-bottom: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-eyebrow::before {
+      content: "";
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      background: currentColor;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 10px 18px;
+      border: 1px solid currentColor;
+      background: transparent;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+    .btn-primary {
+      background: var(--canvas);
+      color: var(--ink);
+      border-color: var(--canvas);
+    }
+    .btn-primary:hover {
+      background: #ffffff;
+      border-color: #ffffff;
+    }
+    .btn-ghost {
+      color: var(--slate-light);
+      border-color: var(--surface-dark-light);
+    }
+    .btn-ghost:hover {
+      color: var(--canvas);
+      border-color: var(--slate-light);
+      background: rgba(255,255,255,0.03);
+    }
+
+    /* ============================================================
+       NAVIGATION
+    ============================================================ */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(245, 240, 232, 0.95);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--hairline);
+      width: 100%;
+    }
+    .nav-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+      height: 54px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      width: 100%;
+    }
+    .nav-brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .nav-brand {
+      font-family: var(--serif);
+      font-size: 19px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--ink);
+      text-decoration: none;
+    }
+    .nav-sys-badge {
+      font-family: var(--mono);
+      font-size: 8.5px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      background: var(--surface-soft);
+      border: 1px solid var(--hairline);
+      color: var(--ink-light);
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      list-style: none;
+    }
+    .nav-links a {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--ink-light);
+      text-decoration: none;
+      letter-spacing: 0.01em;
+      transition: color 0.15s;
+    }
+    .nav-links a:hover {
+      color: var(--ink);
+    }
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .nav-cta {
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--canvas);
+      background: var(--ink);
+      border: 1px solid var(--ink);
+      padding: 7px 14px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+    .nav-cta:hover {
+      background: var(--ink-mid);
+      border-color: var(--ink-mid);
+    }
+
+    /* ============================================================
+       HERO & CONSOLE
+    ============================================================ */
+    .hero {
+      background: var(--surface-dark);
+      color: var(--canvas);
+      padding: 60px 0 68px;
+      border-bottom: 1px solid var(--surface-dark-light);
+      width: 100%;
+    }
+    .hero-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 480px);
+      gap: 48px;
+      align-items: start;
+    }
+    .hero-left {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      min-width: 0;
+    }
+    .hero-eyebrow {
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--slate-light);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .hero-eyebrow::before {
+      content: "";
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      background: var(--slate-light);
+    }
+    .hero h1 {
+      color: var(--canvas);
+    }
+    .hero-sub {
+      font-size: 15.5px;
+      color: #9e9a90;
+      line-height: 1.65;
+    }
+
+    /* 3-Stage Pipeline Strip */
+    .hero-pipeline {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr auto 1fr;
+      align-items: center;
+      gap: 6px;
+      padding: 12px 14px;
+      background: var(--surface-dark-mid);
+      border: 1px solid var(--surface-dark-light);
+      width: 100%;
+    }
+    .hero-pipe-step {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+    .hero-pipe-label {
+      font-family: var(--mono);
+      font-size: 7.5px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+    }
+    .hero-pipe-name {
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--canvas);
+      letter-spacing: 0.03em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .hero-pipe-arrow {
+      color: var(--ink-faint);
+      font-family: system-ui, sans-serif;
+      font-size: 11px;
+      text-align: center;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+    .hero-meta-note {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--ink-faint);
+      line-height: 1.5;
+    }
+    .hero-meta-note strong {
+      color: var(--slate-light);
+      font-weight: 500;
+    }
+
+    /* Event Console */
+    .hero-right {
+      min-width: 0;
+      width: 100%;
+    }
+    .console {
+      background: #090908;
+      border: 1px solid var(--surface-dark-light);
+      box-shadow: 0 16px 36px rgba(0,0,0,0.45);
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      min-width: 0;
+    }
+    .console-header {
+      padding: 9px 14px;
+      background: var(--surface-dark-mid);
+      border-bottom: 1px solid var(--surface-dark-light);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .console-dots {
+      display: flex;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .console-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    .console-dot.red { background: #d64545; }
+    .console-dot.yellow { background: #d69838; }
+    .console-dot.green { background: #2fa65a; }
+    .console-title {
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      color: #928f85;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .console-tag {
+      font-family: var(--mono);
+      font-size: 8.5px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--slate-light);
+      background: rgba(30,61,92,0.3);
+      border: 1px solid var(--slate-mid);
+      padding: 2px 6px;
+      flex-shrink: 0;
+    }
+
+    .console-body {
+      padding: 0;
+      width: 100%;
+    }
+    .event-stream {
+      font-family: var(--mono);
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    .event {
+      padding: 9px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      background: transparent;
+      opacity: 0.95;
+      transition: background 0.25s ease, opacity 0.25s ease;
+    }
+    .event.active-step {
+      background: rgba(30,61,92,0.35);
+      outline: 1px solid var(--slate-mid);
+      opacity: 1;
+    }
+    .event.dimmed {
+      opacity: 0.35;
+    }
+
+    .event-step-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 3px;
+    }
+    .event-step-main {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      min-width: 0;
+    }
+    .event-step-label {
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #7d7a70;
+      min-width: 94px;
+      flex-shrink: 0;
+    }
+    .event-step-val {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--canvas);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .event-status-pill {
+      font-size: 8.5px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 1px 5px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+    .event-status-pill.pass {
+      background: rgba(30,92,60,0.3);
+      color: #72b893;
+      border: 1px solid rgba(114,184,147,0.3);
+    }
+    .event-status-pill.arm {
+      background: rgba(30,61,92,0.4);
+      color: var(--slate-light);
+      border: 1px solid var(--slate-mid);
+    }
+
+    .event-data-grid {
+      margin-left: 104px;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 1px 12px;
+      font-size: 10.5px;
+    }
+    .event-key {
+      color: #706d64;
+    }
+    .event-val {
+      color: #c4c0b4;
+      word-break: break-word;
+    }
+    .event-val.highlight {
+      color: var(--slate-light);
+    }
+
+    .event-connector {
+      padding: 1px 14px 1px 104px;
+      color: #4f4c45;
+      font-size: 11px;
+      line-height: 1;
+      font-family: var(--mono);
+      transition: color 0.2s;
+    }
+    .event-connector.active {
+      color: var(--slate-light);
+    }
+
+    /* Deterministic Assignment Proof Bar */
+    .console-proof {
+      padding: 10px 14px;
+      background: #0f0f0e;
+      border-top: 1px solid var(--surface-dark-light);
+      border-bottom: 1px solid var(--surface-dark-light);
+    }
+    .console-proof-header {
+      font-family: var(--mono);
+      font-size: 8.5px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #8c897f;
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .console-proof-eq {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: #b0ab9f;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+    .console-proof-result {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--slate-light);
+      margin-top: 2px;
+    }
+
+    .console-footer {
+      padding: 9px 14px;
+      background: var(--surface-dark-mid);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .console-status-text {
+      font-family: var(--mono);
+      font-size: 9.5px;
+      color: #8c897f;
+      letter-spacing: 0.04em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .console-status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #30b860;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+    .run-btn {
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      background: var(--slate);
+      color: var(--canvas);
+      border: 1px solid var(--slate-mid);
+      padding: 6px 14px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .run-btn:hover {
+      background: var(--slate-mid);
+      border-color: var(--slate-light);
+    }
+    .run-btn:disabled {
+      background: var(--surface-dark-light);
+      color: var(--ink-faint);
+      border-color: var(--surface-dark-light);
+      cursor: not-allowed;
+    }
+
+    /* ============================================================
+       POLICY GOVERNANCE
+    ============================================================ */
+    .policy {
+      padding: 80px 0;
+      background: var(--surface-dark-mid);
+      color: var(--canvas);
+      border-bottom: 1px solid var(--surface-dark-light);
+      width: 100%;
+    }
+    .policy-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+      width: 100%;
+    }
+    .policy-header {
+      margin-bottom: 36px;
+    }
+    .policy-header h2 {
+      color: var(--canvas);
+      margin-bottom: 10px;
+    }
+    .policy-axiom {
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--slate-light);
+      margin-bottom: 12px;
+    }
+    .policy-intro {
+      font-size: 15px;
+      color: #9c978d;
+      max-width: 640px;
+      line-height: 1.6;
+    }
+
+    .policy-toggle-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .policy-tab {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 8px 16px;
+      background: transparent;
+      color: #8c897f;
+      border: 1px solid var(--surface-dark-light);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+    .policy-tab.active {
+      background: var(--slate);
+      color: var(--canvas);
+      border-color: var(--slate-mid);
+    }
+    .policy-tab:hover:not(.active) {
+      color: var(--canvas);
+      border-color: #4a4a46;
+    }
+
+    .policy-pipeline {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+    .pipeline-stage {
+      background: var(--surface-dark);
+      border: 1px solid var(--surface-dark-light);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+    }
+    .pipeline-stage.authority {
+      border-color: var(--slate-mid);
+      background: rgba(30,61,92,0.15);
+    }
+    .pipeline-stage.verdict-exec {
+      border-color: var(--positive-border);
+      background: rgba(24,92,55,0.1);
+    }
+    .pipeline-stage.verdict-refuse {
+      border-color: var(--failure-border);
+      background: rgba(138,36,36,0.1);
+    }
+    .stage-eyebrow {
+      font-family: var(--mono);
+      font-size: 8px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+    }
+    .pipeline-stage.authority .stage-eyebrow {
+      color: var(--slate-light);
+    }
+    .stage-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--canvas);
+    }
+    .stage-detail {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      color: #928f85;
+      line-height: 1.45;
+      word-break: break-word;
+    }
+
+    /* Policy Gates Panel */
+    .gates-panel {
+      background: var(--surface-dark);
+      border: 1px solid var(--surface-dark-light);
+      width: 100%;
+    }
+    .gates-panel-header {
+      padding: 12px 18px;
+      background: #111110;
+      border-bottom: 1px solid var(--surface-dark-light);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .gates-panel-title {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--canvas);
+    }
+    .gates-panel-count {
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--slate-light);
+    }
+    .gates-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--surface-dark-light);
+    }
+    .gate-cell {
+      background: var(--surface-dark);
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 10px;
+      min-height: 96px;
+      min-width: 0;
+    }
+    .gate-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .gate-name {
+      font-family: var(--sans);
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--canvas);
+    }
+    .gate-badge {
+      font-family: var(--mono);
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 2px 7px;
+      border-radius: 2px;
+      white-space: nowrap;
+    }
+    .gate-badge.pass {
+      background: rgba(24,92,55,0.25);
+      color: #72b893;
+      border: 1px solid rgba(114,184,147,0.4);
+    }
+    .gate-badge.block {
+      background: rgba(138,36,36,0.25);
+      color: #e08080;
+      border: 1px solid rgba(212,138,138,0.4);
+    }
+    .gate-rule {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: #928f85;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+    .gate-rule strong {
+      color: var(--canvas);
+      font-weight: 500;
+    }
+
+    .gates-panel-verdict {
+      padding: 14px 18px;
+      background: #111110;
+      border-top: 1px solid var(--surface-dark-light);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .verdict-title {
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #8c897f;
+    }
+    .verdict-tag {
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 2px;
+    }
+    .verdict-tag.execute {
+      background: var(--positive);
+      color: #ffffff;
+    }
+    .verdict-tag.refuse {
+      background: var(--failure);
+      color: #ffffff;
+    }
+
+    /* ============================================================
+       AUDIT TRAIL & RELIABILITY
+    ============================================================ */
+    .audit {
+      padding: 80px 0;
+      background: var(--canvas);
+      border-bottom: 1px solid var(--hairline);
+      width: 100%;
+    }
+    .audit-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+      width: 100%;
+    }
+    .audit-header {
+      margin-bottom: 36px;
+    }
+    .audit-header h2 {
+      margin-bottom: 10px;
+    }
+    .audit-sub {
+      font-size: 15.5px;
+      color: var(--ink-light);
+      max-width: 620px;
+      line-height: 1.6;
+    }
+
+    .audit-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 350px);
+      gap: 28px;
+      align-items: start;
+      margin-bottom: 48px;
+      min-width: 0;
+      width: 100%;
+    }
+    .audit-layout > * {
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    /* Table Container */
+    .ledger-container {
+      background: var(--surface-dark);
+      border: 1px solid var(--surface-dark-light);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      overflow: hidden;
+    }
+    .ledger-header {
+      padding: 10px 16px;
+      background: var(--surface-dark-mid);
+      border-bottom: 1px solid var(--surface-dark-light);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .ledger-title {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      color: var(--canvas);
+    }
+    .ledger-tag {
+      font-family: var(--mono);
+      font-size: 8.5px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--slate-light);
+      background: rgba(30,61,92,0.3);
+      padding: 2px 6px;
+      border: 1px solid var(--slate-mid);
+    }
+
+    .ledger-table-wrap {
+      overflow-x: auto;
+      max-height: 380px;
+      width: 100%;
+      -webkit-overflow-scrolling: touch;
+    }
+    .ledger-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--mono);
+      font-size: 11px;
+      text-align: left;
+      white-space: nowrap;
+    }
+    .ledger-table th {
+      padding: 8px 14px;
+      background: #111110;
+      color: #8c897f;
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--surface-dark-light);
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+    .ledger-table td {
+      padding: 8px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      color: #b0aba0;
+    }
+    .ledger-table tr {
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .ledger-table tr:hover {
+      background: rgba(255,255,255,0.03);
+    }
+    .ledger-table tr.selected {
+      background: rgba(30,61,92,0.3);
+    }
+    .l-cust { color: var(--canvas); font-weight: 500; }
+    .l-arm-warrant { color: var(--slate-light); font-weight: 600; }
+    .l-arm-rules { color: #b4b0a4; }
+    .l-arm-holdout { color: #78756c; }
+    .l-badge {
+      font-size: 8.5px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 2px;
+      display: inline-block;
+    }
+    .l-badge.executed {
+      background: rgba(24,92,55,0.25);
+      color: #72b893;
+      border: 1px solid rgba(114,184,147,0.3);
+    }
+    .l-badge.failed {
+      background: rgba(138,36,36,0.25);
+      color: #e08080;
+      border: 1px solid rgba(212,138,138,0.3);
+    }
+    .l-badge.pending {
+      background: rgba(255,255,255,0.06);
+      color: #8c897f;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    /* Inspection Pane */
+    .ledger-pane {
+      background: var(--surface-card);
+      border: 1px solid var(--hairline);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      min-width: 0;
+    }
+    .pane-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--hairline);
+      gap: 8px;
+    }
+    .pane-id {
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ink);
+    }
+    .pane-arm {
+      font-family: var(--mono);
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 2px 8px;
+    }
+    .pane-arm.warrant {
+      background: var(--slate-light);
+      color: var(--slate);
+    }
+    .pane-arm.rules {
+      background: var(--surface-soft);
+      color: var(--ink-mid);
+    }
+    .pane-arm.holdout {
+      background: #e0ded6;
+      color: var(--ink-faint);
+    }
+
+    .pane-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .pane-step-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: var(--mono);
+      font-size: 11px;
+      gap: 8px;
+    }
+    .pane-step-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--ink);
+    }
+    .pane-step-check {
+      color: var(--positive);
+      font-weight: bold;
+    }
+    .pane-step-time {
+      color: var(--ink-faint);
+      font-size: 10px;
+    }
+
+    .pane-lifecycle-box {
+      background: var(--canvas);
+      border: 1px solid var(--hairline);
+      padding: 12px 14px;
+    }
+    .pane-lc-title {
+      font-family: var(--mono);
+      font-size: 8.5px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      margin-bottom: 8px;
+    }
+    .pane-lc-items {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .pane-lc-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: var(--mono);
+      font-size: 11px;
+      gap: 8px;
+    }
+    .pane-lc-item-name {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--ink-mid);
+    }
+    .pane-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--hairline);
+    }
+    .pane-dot.active { background: var(--positive); }
+    .pane-dot.alert { background: var(--failure); }
+
+    /* Reliability Feature: UNKNOWN != FAILED */
+    .reliability-card {
+      background: var(--surface-soft);
+      border: 1px solid var(--hairline);
+      padding: 28px;
+      margin-top: 16px;
+      width: 100%;
+    }
+    .reliability-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 20px;
+      margin-bottom: 22px;
+      flex-wrap: wrap;
+    }
+    .reliability-title-group h3 {
+      color: var(--ink);
+      margin-bottom: 6px;
+    }
+    .reliability-statement {
+      font-size: 14.5px;
+      color: var(--ink-mid);
+      max-width: 680px;
+      line-height: 1.6;
+    }
+
+    .reliability-flow {
+      display: flex;
+      align-items: stretch;
+      background: var(--canvas);
+      border: 1px solid var(--hairline);
+      margin-bottom: 22px;
+      overflow-x: auto;
+      width: 100%;
+    }
+    .rf-step {
+      flex: 1;
+      min-width: 130px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      border-right: 1px solid var(--hairline-soft);
+    }
+    .rf-step:last-child {
+      border-right: none;
+    }
+    .rf-step.highlight-unknown {
+      background: var(--warning-bg);
+      border-color: var(--warning-border);
+    }
+    .rf-label {
+      font-family: var(--mono);
+      font-size: 8px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+    }
+    .rf-val {
+      font-family: var(--mono);
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--ink);
+    }
+    .rf-val.timeout { color: var(--warning); }
+    .rf-val.unknown { color: var(--warning); }
+    .rf-val.resolved { color: var(--positive); }
+
+    .reliability-action-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      background: var(--warning-bg);
+      border: 1px solid var(--warning-border);
+      padding: 16px 20px;
+      flex-wrap: wrap;
+    }
+    .rar-text {
+      flex: 1;
+      min-width: 240px;
+    }
+    .rar-title {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--warning);
+      margin-bottom: 4px;
+    }
+    .rar-desc {
+      font-size: 13px;
+      color: #5c3805;
+      line-height: 1.5;
+    }
+    .reconcile-btn {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      background: #7a4a12;
+      color: #ffffff;
+      border: 1px solid #5a340a;
+      padding: 9px 18px;
+      cursor: pointer;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+    .reconcile-btn:hover {
+      background: #5a340a;
+    }
+    .reconcile-btn:disabled {
+      background: #a88a68;
+      cursor: not-allowed;
+    }
+
+    .reconcile-result-box {
+      margin-top: 14px;
+      background: var(--positive-bg);
+      border: 1px solid var(--positive-border);
+      padding: 14px 18px;
+      display: none;
+    }
+    .reconcile-result-box.visible {
+      display: block;
+      animation: fadeIn 0.25s ease;
+    }
+    .rrb-title {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--positive);
+      margin-bottom: 4px;
+    }
+    .rrb-desc {
+      font-size: 12.5px;
+      color: #123d24;
+      line-height: 1.5;
+    }
+
+    /* ============================================================
+       CAUSAL MEASUREMENT
+    ============================================================ */
+    .measurement {
+      padding: 80px 0;
+      background: var(--surface-dark);
+      color: var(--canvas);
+      border-bottom: 1px solid var(--surface-dark-light);
+      width: 100%;
+    }
+    .measurement-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+      width: 100%;
+    }
+    .measurement-header {
+      margin-bottom: 28px;
+    }
+    .measurement-header h2 {
+      color: var(--canvas);
+      margin-bottom: 10px;
+    }
+    .measurement-preamble {
+      background: var(--surface-dark-mid);
+      border: 1px solid var(--surface-dark-light);
+      border-left: 3px solid var(--slate-light);
+      padding: 16px 20px;
+      font-size: 13.5px;
+      color: #b8b3a7;
+      line-height: 1.6;
+      max-width: 860px;
+      margin-bottom: 32px;
+    }
+    .measurement-preamble strong {
+      color: var(--canvas);
+    }
+
+    .measurement-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 340px;
+      gap: 32px;
+      align-items: start;
+    }
+
+    /* CI Panel */
+    .ci-panel {
+      background: var(--surface-dark-card);
+      border: 1px solid var(--surface-dark-light);
+      padding: 26px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+      min-width: 0;
+    }
+    .ci-panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 10px;
+      border-bottom: 1px solid var(--surface-dark-light);
+      padding-bottom: 14px;
+    }
+    .ci-panel-title {
+      font-family: var(--mono);
+      font-size: 12.5px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--canvas);
+    }
+    .ci-panel-sub {
+      font-family: var(--mono);
+      font-size: 9.5px;
+      color: #8c897f;
+      letter-spacing: 0.04em;
+    }
+
+    /* CI Visual Chart */
+    .ci-visual-wrap {
+      position: relative;
+      padding: 18px 0 10px;
+    }
+    .ci-labels {
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--mono);
+      font-size: 9.5px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #706d64;
+      margin-bottom: 12px;
+    }
+    .ci-track {
+      position: relative;
+      height: 38px;
+      background: #111110;
+      border: 1px solid var(--surface-dark-light);
+      display: flex;
+      align-items: center;
+      width: 100%;
+    }
+    .ci-zero-line {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 62%;
+      width: 1px;
+      background: #4a4740;
+      z-index: 1;
+    }
+    .ci-zero-tag {
+      position: absolute;
+      top: -18px;
+      left: 62%;
+      transform: translateX(-50%);
+      font-family: var(--mono);
+      font-size: 9px;
+      color: #8c897f;
+    }
+    .ci-interval-bar {
+      position: absolute;
+      left: 12.9%;
+      width: 27.9%;
+      height: 10px;
+      background: rgba(138,36,36,0.55);
+      border: 1px solid #d48a8a;
+      z-index: 2;
+    }
+    .ci-point-dot {
+      position: absolute;
+      left: 26.9%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #f5dada;
+      box-shadow: 0 0 6px rgba(245,218,218,0.6);
+      z-index: 3;
+    }
+
+    /* Stats Row */
+    .ci-stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      border-top: 1px solid var(--surface-dark-light);
+      padding-top: 18px;
+    }
+    .ci-stat-card {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+    }
+    .ci-stat-label {
+      font-family: var(--mono);
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #8c897f;
+    }
+    .ci-stat-val {
+      font-family: var(--mono);
+      font-size: 21px;
+      font-weight: 600;
+      color: var(--canvas);
+    }
+    .ci-stat-val.pos { color: #72b893; }
+    .ci-stat-val.neg { color: #e08080; }
+    .ci-stat-sub {
+      font-family: var(--mono);
+      font-size: 9.5px;
+      color: #706d64;
+    }
+
+    /* Big Highlight */
+    .ci-highlight {
+      background: #111110;
+      border: 1px solid var(--surface-dark-light);
+      padding: 16px 20px;
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .ci-big-number {
+      font-family: var(--mono);
+      font-size: 30px;
+      font-weight: 700;
+      color: #e08080;
+      line-height: 1;
+    }
+    .ci-big-desc {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: #9c978d;
+      text-align: right;
+      line-height: 1.4;
+    }
+
+    /* Measurement Sidebar */
+    .measurement-side {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-width: 0;
+    }
+    .ev-card {
+      background: var(--surface-dark-card);
+      border: 1px solid var(--surface-dark-light);
+      padding: 14px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .ev-label {
+      font-family: var(--mono);
+      font-size: 8.5px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #8c897f;
+    }
+    .ev-value {
+      font-family: var(--mono);
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--canvas);
+    }
+    .ev-value.neg { color: #e08080; }
+    .ev-sub {
+      font-family: var(--mono);
+      font-size: 9.5px;
+      color: #706d64;
+    }
+
+    .provenance-card {
+      background: var(--surface-dark-mid);
+      border: 1px solid var(--surface-dark-light);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .prov-title {
+      font-family: var(--mono);
+      font-size: 8.5px;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--slate-light);
+    }
+    .prov-val {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--canvas);
+    }
+    .prov-text {
+      font-size: 11.5px;
+      color: #8c897f;
+      line-height: 1.5;
+    }
+
+    /* ============================================================
+       CTA & FOOTER
+    ============================================================ */
+    .cta {
+      padding: 80px 0;
+      background: var(--surface-dark-mid);
+      color: var(--canvas);
+      text-align: center;
+      border-bottom: 1px solid var(--surface-dark-light);
+      width: 100%;
+    }
+    .cta-inner {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      width: 100%;
+    }
+    .cta h2 {
+      color: var(--canvas);
+      max-width: 650px;
+    }
+    .cta-sub {
+      font-family: var(--serif);
+      font-style: italic;
+      font-size: 20px;
+      color: #b0aba0;
+    }
+    .cta-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 8px;
+    }
+    .cta-axiom {
+      font-family: var(--mono);
+      font-size: 9.5px;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      color: #706d64;
+      text-transform: uppercase;
+      margin-top: 14px;
+    }
+
+    footer {
+      background: var(--surface-dark);
+      padding: 22px 0;
+      width: 100%;
+    }
+    .footer-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 14px;
+      width: 100%;
+    }
+    .footer-brand {
+      font-family: var(--serif);
+      font-size: 14px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #706d64;
+    }
+    .footer-meta {
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+    .footer-meta span {
+      font-family: var(--mono);
+      font-size: 9px;
+      color: #706d64;
+      letter-spacing: 0.04em;
+    }
+
+    /* ============================================================
+       RESPONSIVE RULES
+    ============================================================ */
+    @media (max-width: 992px) {
+      .hero-inner {
+        grid-template-columns: 1fr;
+        gap: 36px;
+      }
+      .audit-layout {
+        grid-template-columns: 1fr;
+      }
+      .measurement-grid {
+        grid-template-columns: 1fr;
+      }
+      .policy-pipeline {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .gates-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .nav-links {
+        display: none;
+      }
+      .ci-stats-row {
+        grid-template-columns: 1fr;
+      }
+      .policy-pipeline {
+        grid-template-columns: 1fr;
+      }
+      .gates-grid {
+        grid-template-columns: 1fr;
+      }
+      .reliability-flow {
+        flex-direction: column;
+      }
+      .rf-step {
+        border-right: none;
+        border-bottom: 1px solid var(--hairline-soft);
+        width: 100%;
+      }
+      .rf-step:last-child {
+        border-bottom: none;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .nav-inner {
+        padding: 0 16px;
+      }
+      .nav-sys-badge {
+        display: none;
+      }
+      .hero-inner, .policy-inner, .audit-inner, .measurement-inner, .cta-inner, .footer-inner {
+        padding: 0 16px;
+      }
+      .hero-pipeline {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+      .hero-pipe-arrow {
+        display: none;
+      }
+      .event-step-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 3px;
+      }
+      .event-step-main {
+        width: 100%;
+      }
+      .event-data-grid {
+        margin-left: 0;
+        margin-top: 4px;
+      }
+      .event-connector {
+        padding-left: 8px;
+      }
+      .footer-inner {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .ci-big-desc {
+        text-align: left;
+      }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ============================================================
+       NAVIGATION
+  ============================================================ -->
+  <nav>
+    <div class="nav-inner">
+      <div class="nav-brand-wrap">
+        <a href="/" class="nav-brand">Warrant</a>
+        <span class="nav-sys-badge">INFRASTRUCTURE</span>
+      </div>
+      <ul class="nav-links">
+        <li><a href="#policy">Policy Governance</a></li>
+        <li><a href="#audit">Audit Trail</a></li>
+        <li><a href="#measurement">Causal Measurement</a></li>
+      </ul>
+      <div class="nav-actions">
+        <a href="/dashboard" class="nav-cta">Open Terminal</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ============================================================
+       HERO & CONSOLE
+  ============================================================ -->
+  <section class="hero">
+    <div class="hero-inner">
+
+      <!-- Left Column: Problem, Axis, Positioning -->
+      <div class="hero-left">
+        <div class="hero-eyebrow">INCREMENTAL RECOVERY</div>
+        <h1>The revenue your payment-recovery agent actually caused.</h1>
+        <p class="hero-sub">
+          A failed payment may recover naturally. Warrant isolates natural baseline
+          recovery from true incremental lift through deterministic holdouts, then
+          governs every automated intervention before it touches your payment provider.
+        </p>
+
+        <!-- 3-Step Sequence Pipeline -->
+        <div class="hero-pipeline">
+          <div class="hero-pipe-step">
+            <span class="hero-pipe-label">Trigger</span>
+            <span class="hero-pipe-name">FAILED PAYMENT</span>
+          </div>
+          <span class="hero-pipe-arrow">&rarr;</span>
+          <div class="hero-pipe-step">
+            <span class="hero-pipe-label">Governed Action</span>
+            <span class="hero-pipe-name">RECOVERY INTERVENTION</span>
+          </div>
+          <span class="hero-pipe-arrow">&rarr;</span>
+          <div class="hero-pipe-step">
+            <span class="hero-pipe-label">Holdout Proof</span>
+            <span class="hero-pipe-name">CAUSAL MEASUREMENT</span>
+          </div>
+        </div>
+
+        <div class="hero-actions">
+          <a href="/dashboard" class="btn btn-primary">Open Terminal</a>
+          <a href="#policy" class="btn btn-ghost">Inspect Policy Gates</a>
+        </div>
+
+        <p class="hero-meta-note">
+          Live proof: <strong>MODEL PROPOSES. POLICY DECIDES.</strong> Replay the canonical event below to trace policy enforcement.
+        </p>
+      </div>
+
+      <!-- Right Column: Hero Event Console (Canonical Case) -->
+      <div class="hero-right">
+        <div class="console">
+          <div class="console-header">
+            <div class="console-dots">
+              <div class="console-dot red"></div>
+              <div class="console-dot yellow"></div>
+              <div class="console-dot green"></div>
+            </div>
+            <span class="console-title">warrant &middot; canonical_event_stream</span>
+            <span class="console-tag">SIMULATION</span>
+          </div>
+
+          <div class="console-body">
+            <div class="event-stream" id="eventStream">
+
+              <!-- Step 1: Failed Payment -->
+              <div class="event" id="ev1">
+                <div class="event-step-header">
+                  <div class="event-step-main">
+                    <span class="event-step-label">PAYMENT</span>
+                    <span class="event-step-val">pay_8F31A2</span>
+                  </div>
+                  <span class="event-status-pill pass">RECEIVED</span>
+                </div>
+                <div class="event-data-grid">
+                  <span class="event-key">customer</span><span class="event-val">cust_8F31A2</span>
+                  <span class="event-key">amount</span><span class="event-val highlight">₹2,400</span>
+                  <span class="event-key">reason</span><span class="event-val">insufficient_balance</span>
+                  <span class="event-key">source</span><span class="event-val">razorpay_webhook</span>
+                </div>
+              </div>
+              <div class="event-connector" id="arr1">&darr;</div>
+
+              <!-- Step 2: Assignment -->
+              <div class="event" id="ev2">
+                <div class="event-step-header">
+                  <div class="event-step-main">
+                    <span class="event-step-label">ASSIGNED</span>
+                    <span class="event-step-val">WARRANT</span>
+                  </div>
+                  <span class="event-status-pill arm">BUCKET 73</span>
+                </div>
+                <div class="event-data-grid">
+                  <span class="event-key">hash</span><span class="event-val">sha256(cust_8F31A2 + "warrant-v1")</span>
+                  <span class="event-key">bucket</span><span class="event-val highlight">73 (range 60–99)</span>
+                  <span class="event-key">status</span><span class="event-val">deterministic_holdout_exempt</span>
+                </div>
+              </div>
+              <div class="event-connector" id="arr2">&darr;</div>
+
+              <!-- Step 3: LLM Proposal -->
+              <div class="event" id="ev3">
+                <div class="event-step-header">
+                  <div class="event-step-main">
+                    <span class="event-step-label">LLM PROPOSAL</span>
+                    <span class="event-step-val">SEND_PAYMENT_LINK</span>
+                  </div>
+                  <span class="event-status-pill pass">CONF 0.78</span>
+                </div>
+                <div class="event-data-grid">
+                  <span class="event-key">action</span><span class="event-val">send_payment_link</span>
+                  <span class="event-key">confidence</span><span class="event-val highlight">0.78</span>
+                  <span class="event-key">reason</span><span class="event-val">retry_probability_high</span>
+                </div>
+              </div>
+              <div class="event-connector" id="arr3">&darr;</div>
+
+              <!-- Step 4: Policy Decision -->
+              <div class="event" id="ev4">
+                <div class="event-step-header">
+                  <div class="event-step-main">
+                    <span class="event-step-label">POLICY</span>
+                    <span class="event-step-val">06 / 06 PASSED</span>
+                  </div>
+                  <span class="event-status-pill pass">AUTHORIZED</span>
+                </div>
+                <div class="event-data-grid">
+                  <span class="event-key">carve-out</span><span class="event-val">pass &middot; ₹2,400 &lt; ₹5,000</span>
+                  <span class="event-key">attempt_cap</span><span class="event-val">pass &middot; 1 &lt; 3</span>
+                  <span class="event-key">confidence</span><span class="event-val">pass &middot; 0.78 &gt; 0.60 floor</span>
+                </div>
+              </div>
+              <div class="event-connector" id="arr4">&darr;</div>
+
+              <!-- Step 5: Intent Created -->
+              <div class="event" id="ev5">
+                <div class="event-step-header">
+                  <div class="event-step-main">
+                    <span class="event-step-label">INTENT</span>
+                    <span class="event-step-val">INTENT_8F31</span>
+                  </div>
+                  <span class="event-status-pill arm">APPEND-ONLY</span>
+                </div>
+                <div class="event-data-grid">
+                  <span class="event-key">created</span><span class="event-val">append_only_ledger</span>
+                  <span class="event-key">policy</span><span class="event-val highlight">execute</span>
+                  <span class="event-key">idempotency</span><span class="event-val">case_8F31A2</span>
+                </div>
+              </div>
+              <div class="event-connector" id="arr5">&darr;</div>
+
+              <!-- Step 6: Outcome -->
+              <div class="event" id="ev6">
+                <div class="event-step-header">
+                  <div class="event-step-main">
+                    <span class="event-step-label">STATE</span>
+                    <span class="event-step-val" id="ev6Val">EXECUTED</span>
+                  </div>
+                  <span class="event-status-pill pass" id="ev6Pill">RECONCILED</span>
+                </div>
+                <div class="event-data-grid">
+                  <span class="event-key">provider</span><span class="event-val">razorpay</span>
+                  <span class="event-key">response</span><span class="event-val">payment_link_sent</span>
+                  <span class="event-key">recovered</span><span class="event-val highlight">true</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Deterministic Assignment Proof Bar -->
+          <div class="console-proof">
+            <div class="console-proof-header">
+              <span>DETERMINISTIC ASSIGNMENT PROOF</span>
+              <span style="color:#72b893;">NO RANDOM SELECTION</span>
+            </div>
+            <div class="console-proof-eq">
+              SHA256[cust_8F31A2 + "warrant-v1"] mod 100
+            </div>
+            <div class="console-proof-result">
+              <span style="font-family:system-ui,sans-serif;">&rarr;</span> bucket 73 <span style="font-family:system-ui,sans-serif;">&rarr;</span> <strong>WARRANT ARM</strong>
+            </div>
+          </div>
+
+          <!-- Console Status & Run Control -->
+          <div class="console-footer">
+            <span class="console-status-text" id="consoleStatus">
+              <span class="console-status-dot" id="statusDot"></span>
+              <span id="statusMessage">VERIFIED &middot; case_8F31A2 logged</span>
+            </span>
+            <button class="run-btn" id="runBtn" onclick="runCase()">RUN CASE</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============================================================
+       POLICY GOVERNANCE
+  ============================================================ -->
+  <section class="policy" id="policy">
+    <div class="policy-inner">
+
+      <div class="policy-header">
+        <div class="section-eyebrow" style="color:var(--slate-light);">POLICY GOVERNANCE</div>
+        <h2>The model can propose. It cannot authorize.</h2>
+        <div class="policy-axiom">MODEL PROPOSES &middot; POLICY DECIDES</div>
+        <p class="policy-intro">
+          Large language models generate recovery interventions based on unstructured contexts.
+          Warrant sits as a deterministic control gate between model proposals and financial APIs,
+          strictly preventing unauthorized retries, duplicate charges, or out-of-bounds actions.
+        </p>
+      </div>
+
+      <!-- Case Selection Toggle -->
+      <div class="policy-toggle-bar">
+        <button class="policy-tab active" id="tabExec" onclick="setPolicyCase('exec')">
+          Case A: Approved (₹2,400)
+        </button>
+        <button class="policy-tab" id="tabRefuse" onclick="setPolicyCase('refuse')">
+          Case B: Refused (₹8,400)
+        </button>
+      </div>
+
+      <!-- Pipeline Stages Visual -->
+      <div class="policy-pipeline" id="policyPipeline">
+        <div class="pipeline-stage">
+          <span class="stage-eyebrow">Input Trigger</span>
+          <span class="stage-title" id="stageInputTitle">Failed Payment</span>
+          <span class="stage-detail" id="stageInputDesc">pay_8F31A2 &middot; ₹2,400 &middot; insufficient_balance</span>
+        </div>
+        <div class="pipeline-stage">
+          <span class="stage-eyebrow">Stage 01 &mdash; Inference</span>
+          <span class="stage-title" id="stageModelTitle">LLM Proposer</span>
+          <span class="stage-detail" id="stageModelDesc">send_payment_link &middot; conf 0.78</span>
+        </div>
+        <div class="pipeline-stage authority">
+          <span class="stage-eyebrow">Stage 02 &mdash; Financial Authority</span>
+          <span class="stage-title">Policy Engine</span>
+          <span class="stage-detail" id="stagePolicyDesc">6 deterministic gates. Zero discretion.</span>
+        </div>
+        <div class="pipeline-stage verdict-exec" id="stageVerdictBox">
+          <span class="stage-eyebrow">Ledger State</span>
+          <span class="stage-title" id="stageVerdictTitle" style="color:#72b893;">EXECUTED</span>
+          <span class="stage-detail" id="stageVerdictDesc">Intent INTENT_8F31 committed to ledger</span>
+        </div>
+      </div>
+
+      <!-- Policy Gates Panel -->
+      <div class="gates-panel">
+        <div class="gates-panel-header">
+          <span class="gates-panel-title" id="gatesHeaderTitle">INTENT_8F31 &middot; POLICY TRACE</span>
+          <span class="gates-panel-count" id="gatesHeaderCount">6 / 6 GATES PASSED</span>
+        </div>
+
+        <div class="gates-grid" id="gatesGrid">
+          <!-- Gate 1: Assignment -->
+          <div class="gate-cell">
+            <div class="gate-top">
+              <span class="gate-name">Assignment gate</span>
+              <span class="gate-badge pass" id="gBadge1">PASS</span>
+            </div>
+            <div class="gate-rule" id="gRule1">
+              WARRANT arm &middot; bucket <strong>73</strong> in assigned range 60–99
+            </div>
+          </div>
+
+          <!-- Gate 2: Carve-out -->
+          <div class="gate-cell">
+            <div class="gate-top">
+              <span class="gate-name">Carve-out</span>
+              <span class="gate-badge pass" id="gBadge2">PASS</span>
+            </div>
+            <div class="gate-rule" id="gRule2">
+              Amount <strong>₹2,400</strong> &lt; ₹5,000 carve-out ceiling
+            </div>
+          </div>
+
+          <!-- Gate 3: Attempt Cap -->
+          <div class="gate-cell">
+            <div class="gate-top">
+              <span class="gate-name">Attempt cap</span>
+              <span class="gate-badge pass" id="gBadge3">PASS</span>
+            </div>
+            <div class="gate-rule" id="gRule3">
+              Case attempt <strong>1</strong> &lt; 3 maximum allowed
+            </div>
+          </div>
+
+          <!-- Gate 4: Frequency Cap -->
+          <div class="gate-cell">
+            <div class="gate-top">
+              <span class="gate-name">Frequency cap</span>
+              <span class="gate-badge pass" id="gBadge4">PASS</span>
+            </div>
+            <div class="gate-rule" id="gRule4">
+              <strong>0 links</strong> sent in past 7 days &lt; 2 allowed
+            </div>
+          </div>
+
+          <!-- Gate 5: Confidence Floor -->
+          <div class="gate-cell">
+            <div class="gate-top">
+              <span class="gate-name">Confidence floor</span>
+              <span class="gate-badge pass" id="gBadge5">PASS</span>
+            </div>
+            <div class="gate-rule" id="gRule5">
+              Model confidence <strong>0.78</strong> &gt; 0.60 floor
+            </div>
+          </div>
+
+          <!-- Gate 6: Expected Value -->
+          <div class="gate-cell">
+            <div class="gate-top">
+              <span class="gate-name">Expected value</span>
+              <span class="gate-badge pass" id="gBadge6">PASS</span>
+            </div>
+            <div class="gate-rule" id="gRule6">
+              0.78 &times; ₹2,400 = <strong>₹1,872</strong> &gt; ₹100 min cost
+            </div>
+          </div>
+        </div>
+
+        <div class="gates-panel-verdict">
+          <span class="verdict-title">DETERMINISTIC EVALUATION VERDICT</span>
+          <span class="verdict-tag execute" id="verdictPill">EXECUTE</span>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============================================================
+       AUDIT TRAIL & RELIABILITY
+  ============================================================ -->
+  <section class="audit" id="audit">
+    <div class="audit-inner">
+
+      <div class="audit-header">
+        <div class="section-eyebrow">AUDIT TRAIL</div>
+        <h2>Every action is an append-only record.</h2>
+        <p class="audit-sub">
+          Recovery interventions must never run implicitly. Warrant records every decision
+          as an immutable intent before calling payment gateways.
+        </p>
+      </div>
+
+      <div class="audit-layout">
+        <!-- Monospace Intent Ledger Table -->
+        <div class="ledger-container">
+          <div class="ledger-header">
+            <span class="ledger-title">warrant_intent_ledger</span>
+            <span class="ledger-tag">DETERMINISTIC LOG</span>
+          </div>
+          <div class="ledger-table-wrap">
+            <table class="ledger-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Customer</th>
+                  <th>Arm</th>
+                  <th>Action</th>
+                  <th>Amount</th>
+                  <th>State</th>
+                </tr>
+              </thead>
+              <tbody id="ledgerBody">
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Detail Inspection Drawer -->
+        <div class="ledger-pane">
+          <div class="pane-header">
+            <span class="pane-id" id="paneId">INTENT_8F31</span>
+            <span class="pane-arm warrant" id="paneArm">WARRANT</span>
+          </div>
+
+          <div class="pane-steps">
+            <div class="pane-step-row">
+              <span class="pane-step-left"><span class="pane-step-check">✓</span> Intent created</span>
+              <span class="pane-step-time" id="paneTime1">09-05 14:49</span>
+            </div>
+            <div class="pane-step-row">
+              <span class="pane-step-left"><span class="pane-step-check">✓</span> Provider request sent</span>
+              <span class="pane-step-time" id="paneTime2">09-05 14:49</span>
+            </div>
+            <div class="pane-step-row">
+              <span class="pane-step-left"><span class="pane-step-check">✓</span> Provider response received</span>
+              <span class="pane-step-time" id="paneTime3">09-05 14:50</span>
+            </div>
+          </div>
+
+          <div class="pane-lifecycle-box">
+            <div class="pane-lc-title">State Verification</div>
+            <div class="pane-lc-items" id="paneLcItems">
+              <div class="pane-lc-item">
+                <span class="pane-lc-item-name"><span class="pane-dot active"></span> Idempotency key</span>
+                <span class="mono" style="color:var(--ink-faint);">case_8F31A2</span>
+              </div>
+              <div class="pane-lc-item">
+                <span class="pane-lc-item-name"><span class="pane-dot active"></span> Final state</span>
+                <span class="mono" style="color:var(--positive); font-weight:600;">EXECUTED</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reliability Architecture: UNKNOWN != FAILED -->
+      <div class="reliability-card">
+        <div class="reliability-top">
+          <div class="reliability-title-group">
+            <div class="section-eyebrow" style="color:var(--warning);">RELIABILITY MECHANISM</div>
+            <h3>Unknown is not failed.</h3>
+          </div>
+          <p class="reliability-statement">
+            In financial systems, a gateway network timeout does not mean the customer's card was not charged.
+            Warrant enforces an explicit UNKNOWN state that blocks retry loops until Razorpay reconciliation is verified.
+          </p>
+        </div>
+
+        <!-- Visual Timeout -> Reconciliation Pipeline -->
+        <div class="reliability-flow">
+          <div class="rf-step">
+            <span class="rf-label">01. Provider Call</span>
+            <span class="rf-val">Razorpay API call</span>
+          </div>
+          <div class="rf-step highlight-unknown">
+            <span class="rf-label">02. Gateway Event</span>
+            <span class="rf-val timeout">5s Read Timeout</span>
+          </div>
+          <div class="rf-step highlight-unknown">
+            <span class="rf-label">03. Ledger State</span>
+            <span class="rf-val unknown" id="rfState">UNKNOWN</span>
+          </div>
+          <div class="rf-step">
+            <span class="rf-label">04. Reconciliation</span>
+            <span class="rf-val" id="rfReconcile">Press Reconcile</span>
+          </div>
+          <div class="rf-step">
+            <span class="rf-label">05. Final Outcome</span>
+            <span class="rf-val" id="rfOutcome">—</span>
+          </div>
+        </div>
+
+        <!-- Action Callout Box -->
+        <div class="reliability-action-row">
+          <div class="rar-text">
+            <div class="rar-title">UNKNOWN ≠ FAILED ENFORCEMENT</div>
+            <div class="rar-desc">
+              Retrying without reconciliation creates duplicate transactions.
+              The intent ledger locks subsequent actions until provider state resolves.
+            </div>
+          </div>
+          <button class="reconcile-btn" id="reconcileBtn" onclick="runReconciliation()">RECONCILE</button>
+        </div>
+
+        <!-- Result Box -->
+        <div class="reconcile-result-box" id="reconcileResult">
+          <div class="rrb-title">✓ Provider Reconciliation Completed</div>
+          <div class="rrb-desc">
+            Razorpay confirmed payment link delivery. State updated from UNKNOWN → EXECUTED.
+            Zero duplicate charges initiated. Case INTENT_TIMEOUT_91 unlocked.
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============================================================
+       CAUSAL MEASUREMENT
+  ============================================================ -->
+  <section class="measurement" id="measurement">
+    <div class="measurement-inner">
+
+      <div class="measurement-header">
+        <div class="section-eyebrow" style="color:var(--slate-light);">CAUSAL MEASUREMENT</div>
+        <h2>What this simulation found.</h2>
+      </div>
+
+      <div class="measurement-preamble">
+        The table below shows results from a <strong>deterministic simulation</strong>
+        (seed 20260824). It is not a production outcome. Warrant measures incremental
+        recovery — what this particular run found is a property of the simulation
+        parameters, demonstrating that causal measurement can reveal when an intervention
+        does not create value.
+      </div>
+
+      <div class="measurement-grid">
+        <!-- CI Visualization Panel -->
+        <div class="ci-panel">
+          <div class="ci-panel-header">
+            <span class="ci-panel-title">WARRANT vs HOLDOUT</span>
+            <span class="ci-panel-sub">7-Day Intent-to-Treat &middot; Incremental Effect &middot; 90% CI</span>
+          </div>
+
+          <!-- Visualization Track -->
+          <div class="ci-visual-wrap">
+            <div class="ci-labels">
+              <span>&larr; Warrant worse</span>
+              <span>Warrant better &rarr;</span>
+            </div>
+            <div class="ci-track">
+              <div class="ci-zero-line"></div>
+              <span class="ci-zero-tag">0.0</span>
+              <div class="ci-interval-bar"></div>
+              <div class="ci-point-dot"></div>
+            </div>
+          </div>
+
+          <!-- 3-Col Stats -->
+          <div class="ci-stats-row">
+            <div class="ci-stat-card">
+              <span class="ci-stat-label">Warrant Arm</span>
+              <span class="ci-stat-val">34.2%</span>
+              <span class="ci-stat-sub">235 / 688 recovered</span>
+            </div>
+            <div class="ci-stat-card">
+              <span class="ci-stat-label">Holdout Baseline</span>
+              <span class="ci-stat-val pos">47.8%</span>
+              <span class="ci-stat-sub">160 / 335 natural recovery</span>
+            </div>
+            <div class="ci-stat-card">
+              <span class="ci-stat-label">Causal Lift (ITT)</span>
+              <span class="ci-stat-val neg">−13.6 pp</span>
+              <span class="ci-stat-sub">90% CI [−19.0, −8.2]</span>
+            </div>
+          </div>
+
+          <!-- Big Effect Highlight -->
+          <div class="ci-highlight">
+            <span class="ci-big-number">−13.6 pp</span>
+            <span class="ci-big-desc">
+              90% CI: [−19.0, −8.2] pp<br>
+              Direction confirmed &middot; Magnitude statistically significant
+            </span>
+          </div>
+        </div>
+
+        <!-- Sidebar Comparison Metrics -->
+        <div class="measurement-side">
+          <div class="ev-card">
+            <span class="ev-label">Rules vs Holdout</span>
+            <span class="ev-value neg">−8.6 pp</span>
+            <span class="ev-sub">90% CI: [−14.0, −3.1]</span>
+          </div>
+
+          <div class="ev-card">
+            <span class="ev-label">Warrant vs Rules</span>
+            <span class="ev-value">−5.0 pp</span>
+            <span class="ev-sub">90% CI: [−10.2, +0.2]</span>
+          </div>
+
+          <div class="ev-card">
+            <span class="ev-label">Total Simulated Cases</span>
+            <span class="ev-value">1,704</span>
+            <span class="ev-sub">Holdout 335 &middot; Rules 681 &middot; Warrant 688</span>
+          </div>
+
+          <div class="ev-card">
+            <span class="ev-label">Statistical Confidence</span>
+            <span class="ev-value">90%</span>
+            <span class="ev-sub">Newcombe Method 10 &middot; Alpha 0.10</span>
+          </div>
+
+          <div class="provenance-card">
+            <span class="prov-title">PROVENANCE</span>
+            <span class="prov-val">SIMULATED EXPERIMENT</span>
+            <span class="prov-text">
+              Generated from SEED 20260824. Demonstrates causal measurement framework.
+              Not a production claim.
+            </span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============================================================
+       CTA & FOOTER
+  ============================================================ -->
+  <section class="cta">
+    <div class="cta-inner">
+      <h2>If the recovery happened anyway,<br>it isn't incremental revenue.</h2>
+      <p class="cta-sub">Warrant measures the difference.</p>
+      <div class="cta-actions">
+        <a href="/dashboard" class="btn btn-primary">Open Terminal</a>
+        <a href="https://github.com" class="btn btn-ghost">GitHub Repository</a>
+      </div>
+      <div class="cta-axiom">
+        MODEL PROPOSES &nbsp;&middot;&nbsp; POLICY DECIDES &nbsp;&middot;&nbsp; EXPERIMENT PROVES
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="footer-inner">
+      <span class="footer-brand">WARRANT</span>
+      <div class="footer-meta">
+        <span>SEED: 20260824</span>
+        <span>N: 1,704</span>
+        <span>90% CI &middot; Newcombe Method 10</span>
+        <span>SIMULATED EXPERIMENT</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ============================================================
+       APPLICATION SCRIPTS
+  ============================================================ -->
+  <script>
+    // Canonical Deterministic Ledger Dataset
+    const LEDGER_DATA = [
+      {time:'09-05 14:49', cust:'cust_8F31A2', arm:'WARRANT', action:'EXECUTE', amount:'₹2,400', state:'executed', intent:'INTENT_8F31'},
+      {time:'09-05 11:49', cust:'cust_000498', arm:'WARRANT', action:'EXECUTE', amount:'₹96', state:'executed', intent:'INTENT_0498'},
+      {time:'09-05 08:49', cust:'cust_000448', arm:'HOLDOUT', action:'NO_INTERVENTION', amount:'₹151', state:'pending', intent:'INTENT_0448'},
+      {time:'09-05 05:49', cust:'cust_000024', arm:'RULES', action:'EXECUTE', amount:'₹179', state:'executed', intent:'INTENT_0024'},
+      {time:'09-05 02:49', cust:'cust_000119', arm:'RULES', action:'EXECUTE', amount:'₹28', state:'executed', intent:'INTENT_0119'},
+      {time:'09-04 23:49', cust:'cust_000111', arm:'RULES', action:'EXECUTE', amount:'₹427', state:'executed', intent:'INTENT_0111'},
+      {time:'09-04 20:49', cust:'cust_000206', arm:'RULES', action:'REFUSE', amount:'₹852', state:'failed', intent:'INTENT_0206'},
+      {time:'09-04 17:49', cust:'cust_000435', arm:'RULES', action:'REFUSE', amount:'₹112', state:'failed', intent:'INTENT_0435'},
+      {time:'09-04 14:49', cust:'cust_000369', arm:'WARRANT', action:'EXECUTE', amount:'₹90', state:'executed', intent:'INTENT_0369'},
+      {time:'09-04 11:49', cust:'cust_000067', arm:'HOLDOUT', action:'NO_INTERVENTION', amount:'₹88', state:'pending', intent:'INTENT_0067'},
+      {time:'09-04 08:49', cust:'cust_000064', arm:'WARRANT', action:'EXECUTE', amount:'₹292', state:'executed', intent:'INTENT_0064'},
+      {time:'09-04 05:49', cust:'cust_000394', arm:'RULES', action:'EXECUTE', amount:'₹211', state:'executed', intent:'INTENT_0394'},
+      {time:'09-04 02:49', cust:'cust_000245', arm:'WARRANT', action:'EXECUTE', amount:'₹161', state:'executed', intent:'INTENT_0245'},
+      {time:'09-04 00:00', cust:'cust_000485', arm:'RULES', action:'REFUSE', amount:'₹1,050', state:'failed', intent:'INTENT_0485'},
+      {time:'09-03 20:49', cust:'cust_000307', arm:'HOLDOUT', action:'NO_INTERVENTION', amount:'₹490', state:'pending', intent:'INTENT_0307'},
+      {time:'09-03 17:49', cust:'cust_000219', arm:'WARRANT', action:'EXECUTE', amount:'₹374', state:'executed', intent:'INTENT_0219'},
+      {time:'09-03 14:49', cust:'cust_000099', arm:'WARRANT', action:'REFUSE', amount:'₹6,200', state:'failed', intent:'INTENT_0099'},
+      {time:'09-03 11:49', cust:'cust_000088', arm:'HOLDOUT', action:'NO_INTERVENTION', amount:'₹63', state:'pending', intent:'INTENT_0088'}
+    ];
+
+    // Ledger Render & Selection
+    function renderLedger() {
+      const tbody = document.getElementById('ledgerBody');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+      LEDGER_DATA.forEach((row, i) => {
+        const tr = document.createElement('tr');
+        if (i === 0) tr.className = 'selected';
+        tr.onclick = () => selectLedgerRow(i);
+        const armClass = row.arm === 'WARRANT' ? 'l-arm-warrant' : row.arm === 'RULES' ? 'l-arm-rules' : 'l-arm-holdout';
+        tr.innerHTML = `
+          <td>${row.time}</td>
+          <td class="l-cust">${row.cust}</td>
+          <td class="${armClass}">${row.arm}</td>
+          <td>${row.action}</td>
+          <td class="l-cust">${row.amount}</td>
+          <td><span class="l-badge ${row.state}">${row.state}</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function selectLedgerRow(index) {
+      const rows = document.querySelectorAll('#ledgerBody tr');
+      rows.forEach(r => r.classList.remove('selected'));
+      if (rows[index]) rows[index].classList.add('selected');
+
+      const row = LEDGER_DATA[index];
+      const paneId = document.getElementById('paneId');
+      const paneArm = document.getElementById('paneArm');
+      const paneTime1 = document.getElementById('paneTime1');
+      const paneTime2 = document.getElementById('paneTime2');
+      const paneTime3 = document.getElementById('paneTime3');
+      const paneLcItems = document.getElementById('paneLcItems');
+
+      if (paneId) paneId.textContent = row.intent || ('INTENT_' + row.cust.slice(-4));
+      if (paneArm) {
+        paneArm.textContent = row.arm;
+        paneArm.className = 'pane-arm ' + row.arm.toLowerCase();
+      }
+      if (paneTime1) paneTime1.textContent = row.time;
+      if (paneTime2) paneTime2.textContent = row.time;
+      if (paneTime3) paneTime3.textContent = row.state === 'pending' ? '—' : row.time;
+
+      if (paneLcItems) {
+        const isExec = row.state === 'executed';
+        const isFailed = row.state === 'failed';
+        paneLcItems.innerHTML = `
+          <div class="pane-lc-item">
+            <span class="pane-lc-item-name"><span class="pane-dot active"></span> Idempotency key</span>
+            <span class="mono" style="color:var(--ink-faint);">case_${row.cust.slice(-6)}</span>
+          </div>
+          <div class="pane-lc-item">
+            <span class="pane-lc-item-name"><span class="pane-dot ${isExec ? 'active' : isFailed ? 'alert' : ''}"></span> Final state</span>
+            <span class="mono" style="color:${isExec ? 'var(--positive)' : isFailed ? 'var(--failure)' : 'var(--ink-faint)'}; font-weight:600;">
+              ${row.state.toUpperCase()}
+            </span>
+          </div>
+        `;
+      }
+    }
+
+    // Hero Console Replay Interaction
+    let caseRunning = false;
+    function runCase() {
+      if (caseRunning) return;
+      caseRunning = true;
+
+      const btn = document.getElementById('runBtn');
+      const statusMessage = document.getElementById('statusMessage');
+      const statusDot = document.getElementById('statusDot');
+
+      btn.disabled = true;
+      btn.textContent = 'RUNNING...';
+      if (statusMessage) statusMessage.textContent = 'Processing case pay_8F31A2...';
+      if (statusDot) statusDot.style.background = '#d69838';
+
+      const steps = [
+        {id:'ev1', conn:'arr1', delay:0},
+        {id:'ev2', conn:'arr2', delay:550},
+        {id:'ev3', conn:'arr3', delay:1100},
+        {id:'ev4', conn:'arr4', delay:1650},
+        {id:'ev5', conn:'arr5', delay:2200},
+        {id:'ev6', conn:null, delay:2750}
+      ];
+
+      // Dim all steps initially for replay
+      steps.forEach(s => {
+        const el = document.getElementById(s.id);
+        if (el) el.classList.add('dimmed');
+        if (s.conn) {
+          const c = document.getElementById(s.conn);
+          if (c) c.classList.remove('active');
+        }
+      });
+
+      steps.forEach((s, idx) => {
+        setTimeout(() => {
+          const el = document.getElementById(s.id);
+          if (el) {
+            el.classList.remove('dimmed');
+            el.classList.add('active-step');
+            setTimeout(() => el.classList.remove('active-step'), 400);
+          }
+          if (s.conn) {
+            const c = document.getElementById(s.conn);
+            if (c) c.classList.add('active');
+          }
+
+          if (idx === steps.length - 1) {
+            setTimeout(() => {
+              if (statusMessage) statusMessage.textContent = 'COMPLETE · pay_8F31A2 → EXECUTED';
+              if (statusDot) statusDot.style.background = '#30b860';
+              btn.disabled = false;
+              btn.textContent = 'RUN CASE';
+              caseRunning = false;
+            }, 300);
+          }
+        }, s.delay);
+      });
+    }
+
+    // Policy Case Selection
+    function setPolicyCase(type) {
+      const tabExec = document.getElementById('tabExec');
+      const tabRefuse = document.getElementById('tabRefuse');
+      const stageInputDesc = document.getElementById('stageInputDesc');
+      const stageModelDesc = document.getElementById('stageModelDesc');
+      const stageVerdictBox = document.getElementById('stageVerdictBox');
+      const stageVerdictTitle = document.getElementById('stageVerdictTitle');
+      const stageVerdictDesc = document.getElementById('stageVerdictDesc');
+      const gatesHeaderTitle = document.getElementById('gatesHeaderTitle');
+      const gatesHeaderCount = document.getElementById('gatesHeaderCount');
+      const verdictPill = document.getElementById('verdictPill');
+
+      const gBadge2 = document.getElementById('gBadge2');
+      const gRule2 = document.getElementById('gRule2');
+
+      if (type === 'exec') {
+        tabExec.classList.add('active');
+        tabRefuse.classList.remove('active');
+
+        stageInputDesc.textContent = 'pay_8F31A2 · ₹2,400 · insufficient_balance';
+        stageModelDesc.textContent = 'send_payment_link · conf 0.78';
+        stageVerdictBox.className = 'pipeline-stage verdict-exec';
+        stageVerdictTitle.textContent = 'EXECUTED';
+        stageVerdictTitle.style.color = '#72b893';
+        stageVerdictDesc.textContent = 'Intent INTENT_8F31 committed to ledger';
+
+        gatesHeaderTitle.textContent = 'INTENT_8F31 · POLICY TRACE';
+        gatesHeaderCount.textContent = '6 / 6 GATES PASSED';
+        verdictPill.textContent = 'EXECUTE';
+        verdictPill.className = 'verdict-tag execute';
+
+        gBadge2.textContent = 'PASS';
+        gBadge2.className = 'gate-badge pass';
+        gRule2.innerHTML = 'Amount <strong>₹2,400</strong> &lt; ₹5,000 carve-out ceiling';
+      } else {
+        tabExec.classList.remove('active');
+        tabRefuse.classList.add('active');
+
+        stageInputDesc.textContent = 'pay_91A2C4 · ₹8,400 · bank_declined';
+        stageModelDesc.textContent = 'retry_autopay · conf 0.65';
+        stageVerdictBox.className = 'pipeline-stage verdict-refuse';
+        stageVerdictTitle.textContent = 'REFUSED';
+        stageVerdictTitle.style.color = '#e08080';
+        stageVerdictDesc.textContent = 'Intervention blocked by carve-out rule';
+
+        gatesHeaderTitle.textContent = 'INTENT_91A2 · POLICY TRACE';
+        gatesHeaderCount.textContent = '5 / 6 GATES PASSED · 1 BLOCKED';
+        verdictPill.textContent = 'REFUSE';
+        verdictPill.className = 'verdict-tag refuse';
+
+        gBadge2.textContent = 'BLOCKED';
+        gBadge2.className = 'gate-badge block';
+        gRule2.innerHTML = 'Amount <strong>₹8,400</strong> &gt; ₹5,000 ceiling (Exceeded)';
+      }
+    }
+
+    // Reliability Reconciliation Mechanism
+    let reconciled = false;
+    function runReconciliation() {
+      if (reconciled) return;
+      reconciled = true;
+
+      const btn = document.getElementById('reconcileBtn');
+      const rfState = document.getElementById('rfState');
+      const rfReconcile = document.getElementById('rfReconcile');
+      const rfOutcome = document.getElementById('rfOutcome');
+      const resBox = document.getElementById('reconcileResult');
+
+      btn.disabled = true;
+      btn.textContent = 'RECONCILING...';
+      if (rfReconcile) rfReconcile.textContent = 'Querying Gateway...';
+
+      setTimeout(() => {
+        if (rfState) {
+          rfState.textContent = 'RESOLVED';
+          rfState.className = 'rf-val resolved';
+        }
+        if (rfReconcile) {
+          rfReconcile.textContent = 'Confirmed OK';
+          rfReconcile.className = 'rf-val resolved';
+        }
+        if (rfOutcome) {
+          rfOutcome.textContent = 'EXECUTED';
+          rfOutcome.className = 'rf-val resolved';
+        }
+        btn.textContent = 'RECONCILED';
+        if (resBox) resBox.classList.add('visible');
+      }, 1200);
+    }
+
+    // Initialize on DOM load
+    document.addEventListener('DOMContentLoaded', () => {
+      renderLedger();
+    });
+  </script>
+</body>
+</html>
