@@ -1,5 +1,10 @@
 # Warrant
+## Live Demo
 
+**[Warrant — Live Working Product](https://warrant-2qi2.onrender.com/)**
+
+Explore the deployed recovery control plane, experiment allocation,
+policy governance, intent ledger, and causal measurement dashboard.
 **Decide whether recovery is warranted.**
 
 Recovery rate tells us what happened after an intervention. It doesn't tell us what the intervention caused. A recovery system that sends payment links to everyone can claim credit for customers who would have paid anyway.
