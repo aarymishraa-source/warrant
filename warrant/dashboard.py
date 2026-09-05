@@ -451,7 +451,7 @@ def _fetch_funnel_data(conn: sqlite3.Connection) -> FunnelData:
             stage("Intent Proposed", intents_created, "proposed"),
             stage("Intent Executed", n_executed, "executed"),
             stage("Provider Resolved", n_resolved, "resolved"),
-            stage("Incremental Recovery", n_recovered, "recovered"),
+            stage("Recovered After Action", n_recovered, "recovered"),
         ],
         total=total_assigned,
     )
