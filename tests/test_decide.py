@@ -1,19 +1,13 @@
 """Tests for warrant.decide."""
 
-import pytest
-
-from warrant import config
 from warrant.config import LLM_CONFIDENCE_FLOOR
 from warrant.decide import (
     CaseData,
-    ProposerResult,
     compare_proposers,
+    llm_propose,
     resolve_proposal,
     rules_propose,
-    llm_propose,
 )
-from warrant.policy import Proposal
-
 
 # ------------------------------------------------------------------------- helpers
 

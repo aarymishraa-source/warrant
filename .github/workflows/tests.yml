@@ -54,7 +54,7 @@ jobs:
       - name: Install Ruff
         run: pip install ruff
       - name: Lint
-        run: ruff check warrant/
+        run: ruff check warrant/ tests/
 
   typecheck:
     name: pyright

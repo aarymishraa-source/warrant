@@ -1,24 +1,16 @@
 """Tests for warrant.sim."""
 
-import pytest
-import sqlite3
-import sys
-from types import ModuleType
 
-from warrant import config
-from warrant.sim import (
-    Simulator,
-    SimulatorCase,
-    CustomerSegment,
-    _truth,
-    _rng,
-    P_SELF_HEAL,
-)
-from warrant.act import execute as act_execute, IntentStatus
-from warrant.core import Case, CaseState, create_case
-import warrant.db as db
+from warrant import config, db
+from warrant.act import IntentStatus
+from warrant.act import execute as act_execute
+from warrant.core import CaseState, create_case
 from warrant.policy import Decision, Proposal, Verdict
-
+from warrant.sim import (
+    CustomerSegment,
+    Simulator,
+    _truth,
+)
 
 # ------------------------------------------------------------------------- helpers
 

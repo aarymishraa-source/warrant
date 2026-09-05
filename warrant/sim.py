@@ -76,13 +76,13 @@ import random
 import sqlite3
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Callable, Optional
 
 from warrant import config
-from warrant.act import cancel_pending, execute as act_execute, IntentStatus
+from warrant.act import IntentStatus, cancel_pending
+from warrant.act import execute as act_execute
 from warrant.policy import Proposal, Verdict
 
-__all__ = ["Simulator", "SimulatorCase", "CustomerSegment"]
+__all__ = ["CustomerSegment", "Simulator", "SimulatorCase"]
 
 
 # ------------------------------------------------------------------------- master seed
@@ -190,17 +190,17 @@ class SimulatorCase:
     customer_id: str
     case_type: str
     ticket_amount_paise: int
-    error_reason: Optional[str]
-    error_source: Optional[str]
-    error_step: Optional[str]
-    error_description: Optional[str]
+    error_reason: str | None
+    error_source: str | None
+    error_step: str | None
+    error_description: str | None
     order_id: str = ""
     payment_id: str = ""
 
     # Ground truth (set by Simulator._finalize)
-    outcome_untouched: Optional[bool] = None   # None = unknown
-    outcome_treated: Optional[bool] = None     # None = no treatment attempted
-    segment: Optional[CustomerSegment] = None
+    outcome_untouched: bool | None = None   # None = unknown
+    outcome_treated: bool | None = None     # None = no treatment attempted
+    segment: CustomerSegment | None = None
 
 
 # ------------------------------------------------------------------------- simulator

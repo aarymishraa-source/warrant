@@ -8,11 +8,9 @@ from __future__ import annotations
 
 import sqlite3
 from dataclasses import dataclass, field
-from typing import Optional
 
 from warrant import config
-from warrant.stats import newcombe_diff_ci, DiffResult
-
+from warrant.stats import DiffResult, newcombe_diff_ci
 
 # ------------------------------------------------------------------------- data shapes
 
@@ -110,7 +108,7 @@ class IntentEntry:
     case_id: str
     action_type: str
     status: str
-    external_ref: Optional[str]
+    external_ref: str | None
     attempt: int
     created_at: str
 
@@ -260,7 +258,7 @@ def _all_arm_rows(conn: sqlite3.Connection) -> list[dict]:
 # ------------------------------------------------------------------------- CI helpers
 # CSS percentage properties are on DiffResult (warrant/stats.py), not here.
 
-def _build_arm_summary(arm: str, counts: dict, diff: Optional[DiffResult]) -> ArmSummary:
+def _build_arm_summary(arm: str, counts: dict, diff: DiffResult | None) -> ArmSummary:
     n = counts["n"]
     recovered = counts["recovered"]
     carved_out = counts["carved_out"]
@@ -603,7 +601,7 @@ def build_dashboard(conn: sqlite3.Connection) -> dict:
     active_intents = ledger_data.total
 
     # ── WARRANT vs HOLDOUT CI diff ──────────────────────────────────
-    warrant_diff: Optional[DiffResult] = None
+    warrant_diff: DiffResult | None = None
     if warrant_counts["n"] >= 2 and holdout_counts["n"] >= 2:
         try:
             warrant_diff = newcombe_diff_ci(
@@ -649,10 +647,7 @@ def build_dashboard(conn: sqlite3.Connection) -> dict:
     if holdout_progress >= 100:
         exp_status = "Enrollment Closed"
         exp_css = "closed"
-    elif holdout_progress >= 50:
-        exp_status = "Enrollment Active"
-        exp_css = "active"
-    elif holdout_counts["n"] > 0:
+    elif holdout_progress >= 50 or holdout_counts["n"] > 0:
         exp_status = "Enrollment Active"
         exp_css = "active"
     else:

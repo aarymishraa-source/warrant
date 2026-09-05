@@ -1,9 +1,8 @@
 """Tests for the /dashboard HTTP endpoint."""
 
-import pytest
 from fastapi.testclient import TestClient
 
-from warrant import config, db
+from warrant import db
 from warrant.app import app
 
 

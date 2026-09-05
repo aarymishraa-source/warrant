@@ -1,17 +1,15 @@
 """Tests for warrant.ledger."""
 
-import pytest
 from datetime import datetime, timedelta, timezone
 
 from warrant import db
+from warrant.act import IntentStatus
 from warrant.ledger import (
-    get_pending_intents,
     get_intents_for_case,
+    get_pending_intents,
     resolve,
     stats,
-    IntentSummary,
 )
-from warrant.act import IntentStatus
 
 
 def _fresh_db():

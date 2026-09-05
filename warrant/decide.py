@@ -12,13 +12,11 @@ The LLM never computes EV, calls a payment API, or overrides a gate.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 from pydantic import BaseModel, Field, ValidationError
 
 from warrant.config import ACTION_COST_INR, LLM_CONFIDENCE_FLOOR
 from warrant.policy import Proposal
-
 
 # ------------------------------------------------------------------------- types
 
@@ -30,19 +28,19 @@ class CaseData:
     customer_id: str
     case_type: str          # "upi_autopay" | "one_time_link"
     ticket_amount_paise: int
-    error_reason: Optional[str] = None
-    error_source: Optional[str] = None
-    error_step: Optional[str] = None
-    error_description: Optional[str] = None  # free text; LLM only
+    error_reason: str | None = None
+    error_source: str | None = None
+    error_step: str | None = None
+    error_description: str | None = None  # free text; LLM only
 
 
 @dataclass
 class ProposerResult:
     """Unified output from any proposer."""
 
-    proposal: Optional[Proposal]
+    proposal: Proposal | None
     abstained: bool
-    abstention_reason: Optional[str]
+    abstention_reason: str | None
     source: str  # "rules" | "llm"
 
 
@@ -194,7 +192,7 @@ class _LLMOutput(BaseModel):
     model_config = {"extra": "allow"}  # ignore extra fields the model adds
 
 
-def _llm_call(raw: dict) -> Optional[Proposal]:
+def _llm_call(raw: dict) -> Proposal | None:
     """Validate raw LLM output, or return None on any failure."""
     try:
         validated = _LLMOutput.model_validate(raw)

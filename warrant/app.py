@@ -7,9 +7,8 @@ GET  /dashboard          -- experiment metrics, ITT, Newcombe CIs.
 from __future__ import annotations
 
 import os
-from pathlib import Path
-
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import HTMLResponse
